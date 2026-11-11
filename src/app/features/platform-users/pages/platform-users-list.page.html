@@ -1,0 +1,19 @@
+<div class="platform-users-page-container">
+  <admin-page-header
+    title="Platform Operators"
+    subtitle="Administrative staff directory, role assignments, MFA enforcement and session revocation"
+    breadcrumb="Console / Platform Operators">
+    <div actions>
+      <button class="admin-btn btn-secondary btn-sm" (click)="refresh()">↻ Refresh</button>
+      <button class="admin-btn btn-primary btn-sm" (click)="exportRecords()">Export CSV</button>
+    </div>
+  </admin-page-header>
+
+  <admin-data-table
+    [columns]="tableColumns"
+    [data]="store.items()"
+    [totalCount]="store.totalCount()"
+    [loading]="store.loading()"
+    (rowClick)="onRowClick($event)">
+  </admin-data-table>
+</div>

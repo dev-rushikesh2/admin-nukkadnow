@@ -1,0 +1,19 @@
+<div class="audit-logs-page-container">
+  <admin-page-header
+    title="Immutable Audit Trail"
+    subtitle="Cryptographic immutable operator activity trail, PII unmask queries and security events"
+    breadcrumb="Console / Immutable Audit Trail">
+    <div actions>
+      <button class="admin-btn btn-secondary btn-sm" (click)="refresh()">↻ Refresh</button>
+      <button class="admin-btn btn-primary btn-sm" (click)="exportRecords()">Export CSV</button>
+    </div>
+  </admin-page-header>
+
+  <admin-data-table
+    [columns]="tableColumns"
+    [data]="store.items()"
+    [totalCount]="store.totalCount()"
+    [loading]="store.loading()"
+    (rowClick)="onRowClick($event)">
+  </admin-data-table>
+</div>

@@ -1,0 +1,19 @@
+<div class="catalogue-moderation-page-container">
+  <admin-page-header
+    title="Catalog Moderation Queue"
+    subtitle="Product audit, price sanity verification, prohibited goods alerts and takedown controls"
+    breadcrumb="Console / Catalog Moderation Queue">
+    <div actions>
+      <button class="admin-btn btn-secondary btn-sm" (click)="refresh()">↻ Refresh</button>
+      <button class="admin-btn btn-primary btn-sm" (click)="exportRecords()">Export CSV</button>
+    </div>
+  </admin-page-header>
+
+  <admin-data-table
+    [columns]="tableColumns"
+    [data]="store.items()"
+    [totalCount]="store.totalCount()"
+    [loading]="store.loading()"
+    (rowClick)="onRowClick($event)">
+  </admin-data-table>
+</div>

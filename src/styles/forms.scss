@@ -1,0 +1,59 @@
+/* Accessible High-Security Admin Forms */
+.admin-form-group {
+  margin-bottom: var(--admin-space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--admin-space-xs);
+
+  label {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--admin-text-secondary);
+
+    &.required::after {
+      content: ' *';
+      color: var(--admin-danger);
+    }
+  }
+
+  .admin-input,
+  .admin-select,
+  .admin-textarea {
+    width: 100%;
+    padding: 8px 12px;
+    background-color: var(--admin-bg-subtle);
+    border: 1px solid var(--admin-border-default);
+    border-radius: var(--admin-radius-sm);
+    color: var(--admin-text-primary);
+    font-size: 0.875rem;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+    &:focus {
+      border-color: var(--admin-border-focus);
+      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+    }
+
+    &::placeholder {
+      color: var(--admin-text-muted);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      background-color: var(--admin-bg-surface);
+    }
+  }
+
+  .admin-input-error {
+    font-size: 0.75rem;
+    color: var(--admin-danger);
+    margin-top: 2px;
+  }
+
+  .admin-input-hint {
+    font-size: 0.75rem;
+    color: var(--admin-text-muted);
+    margin-top: 2px;
+  }
+}

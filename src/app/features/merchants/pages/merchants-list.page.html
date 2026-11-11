@@ -1,0 +1,65 @@
+<div class="merchants-page-container">
+  <admin-page-header
+    title="Merchant Master Registry"
+    subtitle="Registered seller businesses across Nagpur localities and seller categories"
+    breadcrumb="Console / Merchants">
+    <div actions>
+      <button class="admin-btn btn-secondary btn-sm" (click)="loadMerchants()">↻ Refresh</button>
+      <button class="admin-btn btn-primary btn-sm" (click)="loadMerchants()">Export CSV</button>
+    </div>
+  </admin-page-header>
+
+  <!-- Filter & Search Toolbar -->
+  <div class="filter-toolbar">
+    <div class="search-input-box">
+      <span class="search-icon">🔍</span>
+      <input
+        type="text"
+        class="admin-input"
+        placeholder="Search merchant name, ID, or locality..."
+        [(ngModel)]="searchQuery"
+        (ngModelChange)="onFilterChange()">
+    </div>
+
+    <div class="filter-controls">
+      <select class="admin-select" [(ngModel)]="selectedLocality" (change)="onFilterChange()">
+        <option value="">All Nagpur Localities</option>
+        <option value="Dharampeth">Dharampeth</option>
+        <option value="Sadar">Sadar</option>
+        <option value="Ramdaspeth">Ramdaspeth</option>
+        <option value="Sitabuldi">Sitabuldi</option>
+        <option value="Wardha Road">Wardha Road</option>
+        <option value="Mahal">Mahal</option>
+      </select>
+
+      <select class="admin-select" [(ngModel)]="selectedMode" (change)="onFilterChange()">
+        <option value="">All Seller Modes</option>
+        <option value="RETAIL">Retail / Kirana</option>
+        <option value="FOOD_STALL">Food & Dairy Stall</option>
+        <option value="HOME_MAKER">Home Maker (Protected)</option>
+        <option value="ARTISAN">Artisan Maker</option>
+        <option value="SEASONAL">Seasonal Pop-up</option>
+      </select>
+
+      <select class="admin-select" [(ngModel)]="selectedStatus" (change)="onFilterChange()">
+        <option value="">All Lifecycle States</option>
+        <option value="ACTIVE">Active</option>
+        <option value="PENDING_VERIFICATION">Pending Verification</option>
+        <option value="SUSPENDED">Suspended</option>
+      </select>
+
+      <button class="admin-btn btn-secondary btn-sm" (click)="resetFilters()">Clear</button>
+    </div>
+  </div>
+
+  <!-- Data Table with Custom Status & Mode Columns -->
+  <div class="table-card">
+    <admin-data-table
+      [columns]="tableColumns"
+      [data]="merchants()"
+      [totalCount]="totalCount()"
+      [loading]="loading()"
+      (rowClick)="onRowClick($event)">
+    </admin-data-table>
+  </div>
+</div>

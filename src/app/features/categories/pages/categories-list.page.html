@@ -1,0 +1,19 @@
+<div class="categories-page-container">
+  <admin-page-header
+    title="Category Taxonomy"
+    subtitle="Hyperlocal marketplace product taxonomy, commission rates and regulatory classifications"
+    breadcrumb="Console / Category Taxonomy">
+    <div actions>
+      <button class="admin-btn btn-secondary btn-sm" (click)="refresh()">↻ Refresh</button>
+      <button class="admin-btn btn-primary btn-sm" (click)="exportRecords()">Export CSV</button>
+    </div>
+  </admin-page-header>
+
+  <admin-data-table
+    [columns]="tableColumns"
+    [data]="store.items()"
+    [totalCount]="store.totalCount()"
+    [loading]="store.loading()"
+    (rowClick)="onRowClick($event)">
+  </admin-data-table>
+</div>

@@ -1,0 +1,19 @@
+<div class="feature-flags-page-container">
+  <admin-page-header
+    title="Feature Flags & Circuit Breakers"
+    subtitle="Runtime canary flags, locality kill-switches and payment gateway failover toggles"
+    breadcrumb="Console / Feature Flags & Circuit Breakers">
+    <div actions>
+      <button class="admin-btn btn-secondary btn-sm" (click)="refresh()">↻ Refresh</button>
+      <button class="admin-btn btn-primary btn-sm" (click)="exportRecords()">Export CSV</button>
+    </div>
+  </admin-page-header>
+
+  <admin-data-table
+    [columns]="tableColumns"
+    [data]="store.items()"
+    [totalCount]="store.totalCount()"
+    [loading]="store.loading()"
+    (rowClick)="onRowClick($event)">
+  </admin-data-table>
+</div>

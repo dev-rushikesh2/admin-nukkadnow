@@ -1,0 +1,53 @@
+name: Deploy Admin Portal
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      target_env:
+        description: 'Deployment Environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+concurrency:
+  group: deploy-admin-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build & Deploy Hardened Admin Artifact
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.target_env || (github.ref == 'refs/heads/main' && 'production' || 'staging') }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.3
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Admin Portal
+        run: pnpm run build:prod
+
+      - name: Build Container Image
+        run: |
+          docker build -t nukkadnow-admin:${{ github.sha }} .
+          docker tag nukkadnow-admin:${{ github.sha }} nukkadnow-admin:latest
+
+      - name: Run E2E Smoke Tests
+        run: pnpm run e2e

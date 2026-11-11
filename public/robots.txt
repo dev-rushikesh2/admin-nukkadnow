@@ -1,0 +1,4 @@
+# NukkadNow Restricted Administrative Portal
+# Crawling and indexing strictly prohibited.
+User-agent: *
+Disallow: /

@@ -1,0 +1,27 @@
+# Global Super-Admin Governance Ownership
+*                                 @nukkadnow/team-security @nukkadnow/team-platform
+
+# Administrative Core Security & Authentication
+/src/app/core/auth/              @nukkadnow/team-security
+/src/app/core/permissions/       @nukkadnow/team-security
+/src/app/core/audit-context/     @nukkadnow/team-security
+/src/app/core/http/              @nukkadnow/team-security
+
+# Financial & Moderation Workflows
+/src/app/features/refunds-disputes/       @nukkadnow/team-finance
+/src/app/features/payments/               @nukkadnow/team-finance
+/src/app/features/subscriptions/          @nukkadnow/team-finance
+/src/app/features/merchant-verification/  @nukkadnow/team-compliance
+/src/app/features/catalogue-moderation/   @nukkadnow/team-compliance
+/src/app/features/audit-logs/             @nukkadnow/team-security
+
+# Shared Libraries
+/libs/access-control/            @nukkadnow/team-security
+/libs/api-client/                @nukkadnow/team-platform
+/libs/data-table/                @nukkadnow/team-frontend-core
+/libs/ui/                        @nukkadnow/team-frontend-core
+
+# CI/CD & Infrastructure
+/.github/workflows/              @nukkadnow/team-devops
+/Dockerfile                      @nukkadnow/team-devops
+/nginx.conf                      @nukkadnow/team-security @nukkadnow/team-devops

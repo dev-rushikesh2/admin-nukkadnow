@@ -1,0 +1,8 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "../../dist/out-tsc/libs/data-table",
+    "types": []
+  },
+  "include": ["src/**/*.ts"]
+}

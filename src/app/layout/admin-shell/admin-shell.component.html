@@ -1,0 +1,35 @@
+<div class="admin-layout-root">
+  <!-- Inactivity Warning Banner -->
+  @if (idleService.isWarningVisible()) {
+    <div class="idle-warning-bar">
+      <span>⚠️ <strong>Inactivity Warning:</strong> Admin console will auto-lock in {{ idleService.secondsRemaining() }} seconds due to inactivity.</span>
+      <button class="admin-btn btn-secondary btn-sm" (click)="idleService.recordActivity()">Keep Working</button>
+    </div>
+  }
+
+  <div class="admin-layout-body">
+    <!-- Sidebar -->
+    <admin-sidebar [collapsed]="sidebarCollapsed()"></admin-sidebar>
+
+    <!-- Main Content Area -->
+    <div class="admin-main-wrapper">
+      <admin-topbar
+        (toggleSidebar)="toggleSidebar()"
+        (openCommandSearch)="openCommandSearch()">
+      </admin-topbar>
+
+      <main class="admin-content-viewport">
+        <router-outlet></router-outlet>
+      </main>
+    </div>
+  </div>
+
+  <!-- Global Command Palette Modal (Ctrl+K) -->
+  <admin-command-search
+    [isOpen]="commandSearchOpen()"
+    (close)="closeCommandSearch()">
+  </admin-command-search>
+
+  <!-- Global Mandatory Audit Reason Modal -->
+  <admin-audit-reason-modal></admin-audit-reason-modal>
+</div>

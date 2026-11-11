@@ -1,0 +1,45 @@
+.admin-layout-root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--admin-bg-canvas);
+}
+
+.idle-warning-bar {
+  background-color: var(--admin-danger);
+  color: #ffffff;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8125rem;
+  z-index: var(--z-index-security-banner);
+  animation: pulse-danger 2s infinite;
+}
+
+@keyframes pulse-danger {
+  0% { opacity: 1; }
+  50% { opacity: 0.85; }
+  100% { opacity: 1; }
+}
+
+.admin-layout-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.admin-main-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.admin-content-viewport {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--admin-space-lg);
+  background-color: var(--admin-bg-canvas);
+}

@@ -1,0 +1,19 @@
+<div class="merchant-verification-page-container">
+  <admin-page-header
+    title="Merchant KYC Verification Queue"
+    subtitle="Government KYC, FSSAI food licenses, GSTIN, and bank account penny-drop audits"
+    breadcrumb="Console / Merchant KYC Verification Queue">
+    <div actions>
+      <button class="admin-btn btn-secondary btn-sm" (click)="refresh()">↻ Refresh</button>
+      <button class="admin-btn btn-primary btn-sm" (click)="exportRecords()">Export CSV</button>
+    </div>
+  </admin-page-header>
+
+  <admin-data-table
+    [columns]="tableColumns"
+    [data]="store.items()"
+    [totalCount]="store.totalCount()"
+    [loading]="store.loading()"
+    (rowClick)="onRowClick($event)">
+  </admin-data-table>
+</div>

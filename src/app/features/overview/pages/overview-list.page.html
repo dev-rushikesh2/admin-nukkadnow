@@ -1,0 +1,184 @@
+<div class="overview-dashboard-container">
+  <!-- Header with Live System Status -->
+  <admin-page-header
+    title="Platform Operations Command Center"
+    subtitle="Nagpur Locality Pilot · Real-Time Commerce Telemetry & Safety"
+    breadcrumb="Console / Command Center">
+    <div actions>
+      <div class="system-status-indicator">
+        <span class="pulse-dot"></span>
+        <span class="status-text">All Gateway Nodes Operational</span>
+      </div>
+      <button class="admin-btn btn-secondary btn-sm" (click)="refreshMetrics()">
+        ↻ Refresh
+      </button>
+    </div>
+  </admin-page-header>
+
+  <!-- High-Level KPI Metric Tiles -->
+  <div class="metrics-grid">
+    <admin-metric-card
+      title="Today's GMV (Nagpur)"
+      value="₹ 1,84,350"
+      delta="+18.4%"
+      deltaType="positive"
+      period="vs yesterday"
+      icon="💰"
+      [highlight]="true">
+    </admin-metric-card>
+
+    <admin-metric-card
+      title="Active Merchants"
+      value="142"
+      delta="+8 onboarding"
+      deltaType="positive"
+      period="this week"
+      icon="🏬">
+    </admin-metric-card>
+
+    <admin-metric-card
+      title="In-Flight Orders"
+      value="38"
+      delta="94.2% on-time"
+      deltaType="positive"
+      period="pickup adherence"
+      icon="🛍️">
+    </admin-metric-card>
+
+    <admin-metric-card
+      title="KYC Verification Queue"
+      value="5"
+      delta="SLA: < 4 hrs"
+      deltaType="neutral"
+      period="2 urgent"
+      icon="🛡️">
+    </admin-metric-card>
+
+    <admin-metric-card
+      title="Pending Refunds"
+      value="2"
+      delta="₹ 1,420 total"
+      deltaType="negative"
+      period="requires dual-sign"
+      icon="↩️">
+    </admin-metric-card>
+
+    <admin-metric-card
+      title="System Mesh P95 Latency"
+      value="42 ms"
+      delta="Healthy (< 100ms)"
+      deltaType="positive"
+      period="12 microservices"
+      icon="⚡">
+    </admin-metric-card>
+  </div>
+
+  <!-- Operational Focus Layout: 2 Columns -->
+  <div class="dashboard-split-grid">
+    <!-- Left Column: Locality Performance & Queue Pressure -->
+    <div class="dashboard-card">
+      <div class="card-title-bar">
+        <h3>📍 Locality Fulfillment Pressure (Nagpur)</h3>
+        <span class="badge badge-info">Live Stream</span>
+      </div>
+
+      <div class="locality-breakdown-list">
+        <div class="locality-row">
+          <div class="locality-info">
+            <span class="locality-name">Dharampeth</span>
+            <span class="locality-stats">48 Outlets · 14 Active Batches</span>
+          </div>
+          <div class="pressure-bar-container">
+            <div class="pressure-fill normal" style="width: 45%;"></div>
+          </div>
+          <span class="pressure-label">Normal (45%)</span>
+        </div>
+
+        <div class="locality-row">
+          <div class="locality-info">
+            <span class="locality-name">Sadar</span>
+            <span class="locality-stats">36 Outlets · 8 Active Batches</span>
+          </div>
+          <div class="pressure-bar-container">
+            <div class="pressure-fill high" style="width: 78%;"></div>
+          </div>
+          <span class="pressure-label warning">High (78%)</span>
+        </div>
+
+        <div class="locality-row">
+          <div class="locality-info">
+            <span class="locality-name">Ramdaspeth</span>
+            <span class="locality-stats">28 Outlets · 6 Active Batches</span>
+          </div>
+          <div class="pressure-bar-container">
+            <div class="pressure-fill normal" style="width: 32%;"></div>
+          </div>
+          <span class="pressure-label">Low (32%)</span>
+        </div>
+
+        <div class="locality-row">
+          <div class="locality-info">
+            <span class="locality-name">Wardha Road / Somalwada</span>
+            <span class="locality-stats">30 Outlets · 11 Active Batches</span>
+          </div>
+          <div class="pressure-bar-container">
+            <div class="pressure-fill normal" style="width: 52%;"></div>
+          </div>
+          <span class="pressure-label">Normal (52%)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Priority Security & Operations Log -->
+    <div class="dashboard-card">
+      <div class="card-title-bar">
+        <h3>🚨 Priority Action Triage</h3>
+        <span class="badge badge-warning">Operator Action Required</span>
+      </div>
+
+      <div class="action-triage-list">
+        <div class="triage-item urgent">
+          <div class="triage-icon">🛡️</div>
+          <div class="triage-content">
+            <span class="triage-title">Haldiram Sweets (Sadar Outlet) - FSSAI Renewal Uploaded</span>
+            <span class="triage-meta">Submitted 24 mins ago by Merchant Owner · License #11521054000129</span>
+          </div>
+          <button class="admin-btn btn-secondary btn-sm" (click)="navigateTo('/merchant-verification')">Review</button>
+        </div>
+
+        <div class="triage-item danger">
+          <div class="triage-icon">↩️</div>
+          <div class="triage-content">
+            <span class="triage-title">Refund Escalation: ₹ 850 (Order #ORD-7819)</span>
+            <span class="triage-meta">Store closed before pickup slot · Customer requested full refund</span>
+          </div>
+          <button class="admin-btn btn-danger btn-sm" (click)="navigateTo('/refunds-disputes')">Authorize</button>
+        </div>
+
+        <div class="triage-item warning">
+          <div class="triage-icon">📦</div>
+          <div class="triage-content">
+            <span class="triage-title">Catalog Moderation: Price Anomaly Flag</span>
+            <span class="triage-meta">Seller listed Fresh Alphonso Mango Box at ₹ 10 (potential fat-finger entry)</span>
+          </div>
+          <button class="admin-btn btn-secondary btn-sm" (click)="navigateTo('/catalogue-moderation')">Inspect</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Orders Inspection Table -->
+  <div class="dashboard-card recent-orders-section">
+    <div class="card-title-bar">
+      <h3>⚡ Real-Time Global Orders Stream</h3>
+      <button class="admin-btn btn-secondary btn-sm" (click)="navigateTo('/orders')">View All Orders →</button>
+    </div>
+
+    <admin-data-table
+      [columns]="orderTableColumns"
+      [data]="recentOrders"
+      [totalCount]="recentOrders.length"
+      (rowClick)="onOrderRowClick($event)">
+    </admin-data-table>
+  </div>
+</div>

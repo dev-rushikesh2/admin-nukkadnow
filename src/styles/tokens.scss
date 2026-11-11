@@ -1,0 +1,67 @@
+:root {
+  /* Color Palette - Administrative Dark Modern Theme */
+  --admin-bg-canvas: #090d16;
+  --admin-bg-surface: #0f172a;
+  --admin-bg-subtle: #1e293b;
+  --admin-bg-card: #131c31;
+  --admin-bg-elevated: #1e293b;
+  --admin-bg-hover: #27354f;
+
+  /* Borders & Dividers */
+  --admin-border-subtle: #1e293b;
+  --admin-border-default: #334155;
+  --admin-border-strong: #475569;
+  --admin-border-focus: #38bdf8;
+
+  /* Typography Colors */
+  --admin-text-primary: #f8fafc;
+  --admin-text-secondary: #94a3b8;
+  --admin-text-muted: #64748b;
+  --admin-text-inverse: #090d16;
+
+  /* Primary Accent & Brand */
+  --admin-primary: #3b82f6;
+  --admin-primary-hover: #2563eb;
+  --admin-primary-light: rgba(59, 130, 246, 0.15);
+
+  /* Status Colors */
+  --admin-success: #10b981;
+  --admin-success-subtle: rgba(16, 185, 129, 0.12);
+  --admin-warning: #f59e0b;
+  --admin-warning-subtle: rgba(245, 158, 11, 0.12);
+  --admin-danger: #ef4444;
+  --admin-danger-subtle: rgba(239, 68, 68, 0.15);
+  --admin-info: #06b6d4;
+  --admin-info-subtle: rgba(6, 182, 212, 0.12);
+  --admin-purple: #8b5cf6;
+  --admin-purple-subtle: rgba(139, 92, 246, 0.15);
+
+  /* Security & Audit Level Colors */
+  --admin-security-elevated: #f43f5e;
+  --admin-security-mfa: #0ea5e9;
+
+  /* Shadows & Elevation */
+  --admin-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --admin-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+  --admin-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
+  --admin-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+
+  /* Spacing */
+  --admin-space-xs: 4px;
+  --admin-space-sm: 8px;
+  --admin-space-md: 16px;
+  --admin-space-lg: 24px;
+  --admin-space-xl: 32px;
+  --admin-space-2xl: 48px;
+
+  /* Radii */
+  --admin-radius-sm: 4px;
+  --admin-radius-md: 8px;
+  --admin-radius-lg: 12px;
+  --admin-radius-full: 9999px;
+
+  /* Layout Dimensions */
+  --admin-sidebar-width: 260px;
+  --admin-sidebar-collapsed-width: 72px;
+  --admin-topbar-height: 64px;
+}

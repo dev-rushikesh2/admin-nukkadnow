@@ -1,0 +1,19 @@
+<div class="plans-pricing-page-container">
+  <admin-page-header
+    title="Plans & Pricing Slabs"
+    subtitle="SaaS tier definitions, transaction fee matrices, and pilot locality introductory offers"
+    breadcrumb="Console / Plans & Pricing Slabs">
+    <div actions>
+      <button class="admin-btn btn-secondary btn-sm" (click)="refresh()">↻ Refresh</button>
+      <button class="admin-btn btn-primary btn-sm" (click)="exportRecords()">Export CSV</button>
+    </div>
+  </admin-page-header>
+
+  <admin-data-table
+    [columns]="tableColumns"
+    [data]="store.items()"
+    [totalCount]="store.totalCount()"
+    [loading]="store.loading()"
+    (rowClick)="onRowClick($event)">
+  </admin-data-table>
+</div>
