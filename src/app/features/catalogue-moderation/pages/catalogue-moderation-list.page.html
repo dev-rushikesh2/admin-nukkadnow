@@ -1,19 +1,112 @@
 <div class="catalogue-moderation-page-container">
   <admin-page-header
-    title="Catalog Moderation Queue"
-    subtitle="Product audit, price sanity verification, prohibited goods alerts and takedown controls"
-    breadcrumb="Console / Catalog Moderation Queue">
+    title="Platform Catalog & Price Governance"
+    subtitle="Admin Price-Cap enforcement, legal MRP verification, anti-gouging controls, and takedown management"
+    breadcrumb="Console / Catalog Governance & Price Caps">
     <div actions>
+      <button class="admin-btn btn-secondary btn-sm" (click)="toggleAddCap()">
+        {{ showAddCapForm() ? '✕ Close Form' : '+ New Price Cap' }}
+      </button>
       <button class="admin-btn btn-secondary btn-sm" (click)="refresh()">↻ Refresh</button>
-      <button class="admin-btn btn-primary btn-sm" (click)="exportRecords()">Export CSV</button>
     </div>
   </admin-page-header>
 
-  <admin-data-table
-    [columns]="tableColumns"
-    [data]="store.items()"
-    [totalCount]="store.totalCount()"
-    [loading]="store.loading()"
-    (rowClick)="onRowClick($event)">
-  </admin-data-table>
+  <!-- Platform Admin Price Caps Governance Card -->
+  <section class="price-caps-section mb-6">
+    <div class="section-card">
+      <div class="card-header-flex">
+        <div>
+          <h2 class="card-title">Active Platform Price Caps</h2>
+          <p class="card-subtitle">
+            Mandatory maximum allowable selling prices enforced across all tenant merchants to prevent gouging and protect consumers.
+          </p>
+        </div>
+      </div>
+
+      <!-- Add Price Cap Form -->
+      @if (showAddCapForm()) {
+        <div class="add-cap-form-box">
+          <h3 class="form-box-title">Create Platform Price Ceiling</h3>
+          <div class="form-row-grid">
+            <div class="form-group">
+              <label>Scope</label>
+              <select [(ngModel)]="newScope" class="admin-input">
+                <option value="CATEGORY">Category</option>
+                <option value="LOCALITY">Locality / City</option>
+                <option value="GLOBAL">Global Platform</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Target Category / Locality</label>
+              <input type="text" [(ngModel)]="newTargetKey" placeholder="e.g. Dairy & Milk, Fresh Produce" class="admin-input" />
+            </div>
+            <div class="form-group">
+              <label>Max Ceiling Price (₹)</label>
+              <input type="number" [(ngModel)]="newMaxPriceRupees" min="1" class="admin-input" />
+            </div>
+            <div class="form-group">
+              <label>Regulatory Mandate / Reason</label>
+              <input type="text" [(ngModel)]="newReason" placeholder="e.g. Essential goods price stabilization" class="admin-input" />
+            </div>
+          </div>
+          <div class="form-actions-row">
+            <button class="admin-btn btn-primary btn-sm" (click)="submitNewPriceCap()">Enforce Rule</button>
+            <button class="admin-btn btn-secondary btn-sm" (click)="toggleAddCap()">Cancel</button>
+          </div>
+        </div>
+      }
+
+      <!-- Rules Table -->
+      <div class="table-responsive">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Scope</th>
+              <th>Target</th>
+              <th>Max Price Cap</th>
+              <th>MRP Cap</th>
+              <th>Regulatory Reason</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (rule of store.priceCaps(); track rule.id) {
+              <tr>
+                <td><span class="badge badge-scope">{{ rule.scope }}</span></td>
+                <td><strong>{{ rule.targetKey }}</strong></td>
+                <td><span class="text-cap-price">{{ rule.maxPriceFormatted }}</span></td>
+                <td>{{ rule.enforceMrpCap ? 'Mandatory (<= MRP)' : 'Disabled' }}</td>
+                <td class="text-muted">{{ rule.reason }}</td>
+                <td>
+                  <span class="status-chip active">ACTIVE</span>
+                </td>
+                <td>
+                  <button class="admin-btn btn-danger-ghost btn-xs" (click)="deactivateCap(rule.id)">Deactivate</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Catalog Moderation Queue -->
+  <section class="moderation-queue-section">
+    <div class="section-card">
+      <h2 class="card-title">Product Moderation & Price Sanity Queue</h2>
+      <p class="card-subtitle">
+        Merchants submit items within their autonomy. Flagged entries show price-cap or MRP breaches requiring admin action.
+      </p>
+
+      <admin-data-table
+        [columns]="tableColumns"
+        [data]="store.items()"
+        [totalCount]="store.totalCount()"
+        [loading]="store.loading()"
+        (rowClick)="onRowClick($event)">
+      </admin-data-table>
+    </div>
+  </section>
 </div>
