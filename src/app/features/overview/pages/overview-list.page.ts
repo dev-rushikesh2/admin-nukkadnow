@@ -1,9 +1,11 @@
-import { Component, inject, OnInit, signal, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, inject, OnInit, signal, computed, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { PageHeaderComponent, MetricCardComponent } from '@nukkadnow/admin-ui';
 import { DataTableComponent, TableColumn } from '@nukkadnow/admin-data-table';
 import { AdminApiClient, AdminEndpoints } from '@nukkadnow/admin-api-client';
+import { AdminSessionService } from '../../../core/auth/session.service';
 
 export interface RecentOrderRow {
   id: string;
@@ -56,7 +58,7 @@ export interface OverviewDashboardPayload {
 @Component({
   selector: 'admin-overview-list-page',
   standalone: true,
-  imports: [CommonModule, PageHeaderComponent, MetricCardComponent, DataTableComponent],
+  imports: [CommonModule, FormsModule, PageHeaderComponent, MetricCardComponent, DataTableComponent],
   templateUrl: './overview-list.page.html',
   styleUrls: ['./overview-list.page.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -65,29 +67,58 @@ export class OverviewListPageComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly api = inject(AdminApiClient);
   private readonly cdr = inject(ChangeDetectorRef);
+  readonly sessionService = inject(AdminSessionService);
 
   readonly metrics = signal<OverviewMetrics | null>(null);
   readonly localityFulfillment = signal<LocalityFulfillmentRow[]>([]);
   readonly actionTriage = signal<ActionTriageRow[]>([]);
   readonly recentOrders = signal<RecentOrderRow[]>([]);
   readonly isLoading = signal<boolean>(false);
+  readonly selectedCityFilter = signal<string>('ALL');
+
+  readonly activeCityScopeName = computed(() => {
+    const geo = this.sessionService.geoAssignment();
+    if (geo?.cityName) {
+      return geo.cityName;
+    }
+    const filter = this.selectedCityFilter();
+    return filter === 'ALL' ? 'Global Command' : filter;
+  });
 
   readonly orderTableColumns: TableColumn<RecentOrderRow>[] = [
     { key: 'id', header: 'Order Ref', width: '160px', sortable: true },
-    { key: 'merchantName', header: 'Merchant & Outlet', sortable: true },
-    { key: 'locality', header: 'Nagpur Locality', width: '150px' },
-    { key: 'amount', header: 'Total Value', width: '130px', align: 'right', sortable: true },
-    { key: 'status', header: 'Status', width: '140px' },
+    { key: 'merchantName', header: 'Merchant & Store', sortable: true },
+    { key: 'locality', header: 'Locality & Zone', width: '160px' },
+    { key: 'amount', header: 'Order Value', width: '130px', align: 'right', sortable: true },
+    { key: 'status', header: 'Fulfillment State', width: '150px' },
     { key: 'placedAt', header: 'Placed At', width: '160px' },
   ];
 
   ngOnInit(): void {
+    const geo = this.sessionService.geoAssignment();
+    if (geo?.cityName) {
+      this.selectedCityFilter.set(geo.cityName);
+    }
+    this.refreshMetrics();
+  }
+
+  setCityFilter(city: string): void {
+    this.selectedCityFilter.set(city);
     this.refreshMetrics();
   }
 
   refreshMetrics(): void {
     this.isLoading.set(true);
-    this.api.get<OverviewDashboardPayload>(AdminEndpoints.OVERVIEW).subscribe({
+    const params: Record<string, string> = {};
+    const geo = this.sessionService.geoAssignment();
+    
+    if (geo?.cityName) {
+      params['city'] = geo.cityName;
+    } else if (this.selectedCityFilter() !== 'ALL') {
+      params['city'] = this.selectedCityFilter();
+    }
+
+    this.api.get<OverviewDashboardPayload>(AdminEndpoints.OVERVIEW, params).subscribe({
       next: (res) => {
         if (res.data) {
           this.metrics.set(res.data.metrics);

@@ -1,19 +1,298 @@
-<div class="reviews-moderation-page-container">
+<div class="reviews-moderation-container">
   <admin-page-header
-    title="Reviews Moderation"
-    subtitle="Ratings inspection, spam detection, merchant dispute rebuttals and review visibility"
-    breadcrumb="Console / Reviews Moderation">
-    <div actions>
-      <button class="admin-btn btn-secondary btn-sm" (click)="refresh()">↻ Refresh</button>
-      <button class="admin-btn btn-primary btn-sm" (click)="exportRecords()">Export CSV</button>
+    [title]="'Community Reviews & UGC Moderation — ' + activeCityName()"
+    subtitle="Audit consumer ratings, monitor merchant rebuttals, and enforce marketplace conduct policies."
+    breadcrumb="Console / Customer Helpdesk / Reviews Moderation">
+    <div actions class="header-actions">
+      <button class="admin-btn btn-secondary btn-sm" (click)="fetchData()">
+        ↻ Refresh
+      </button>
+      <button class="admin-btn btn-outline btn-sm" (click)="exportRecords()">
+        📥 Export Audited CSV
+      </button>
     </div>
   </admin-page-header>
 
-  <admin-data-table
-    [columns]="tableColumns"
-    [data]="store.items()"
-    [totalCount]="store.totalCount()"
-    [loading]="store.loading()"
-    (rowClick)="onRowClick($event)">
-  </admin-data-table>
+  <!-- KPI Status Cards -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">Monitored Reviews</div>
+      <div class="kpi-value">{{ store.totalCount() }}</div>
+      <div class="kpi-sub">Across {{ activeCityName() }}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Average Rating</div>
+      <div class="kpi-value text-accent">4.4 ★</div>
+      <div class="kpi-sub">Verified orders only</div>
+    </div>
+    <div class="kpi-card warning">
+      <div class="kpi-label">Flagged / Under Review</div>
+      <div class="kpi-value text-warning">1</div>
+      <div class="kpi-sub">Requires operator triage</div>
+    </div>
+    <div class="kpi-card danger">
+      <div class="kpi-label">Takedown / Removed</div>
+      <div class="kpi-value text-danger">1</div>
+      <div class="kpi-sub">Spam or policy breach</div>
+    </div>
+  </div>
+
+  <!-- Geographic & Star Filters Toolbar -->
+  <div class="filter-toolbar">
+    <!-- City Territory Scope Selector (Global Admins only) -->
+    @if (sessionService.isRoot() || sessionService.isSuperAdmin()) {
+      <div class="city-selector-group">
+        <label class="toolbar-label">Territory Scope:</label>
+        <div class="pill-buttons">
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="selectedCity === 'ALL'"
+            (click)="onCityFilterChange('ALL')">
+            🌐 All Cities
+          </button>
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="selectedCity === 'Nagpur'"
+            (click)="onCityFilterChange('Nagpur')">
+            📍 Nagpur
+          </button>
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="selectedCity === 'Akola'"
+            (click)="onCityFilterChange('Akola')">
+            📍 Akola
+          </button>
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="selectedCity === 'Amravati'"
+            (click)="onCityFilterChange('Amravati')">
+            📍 Amravati
+          </button>
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="selectedCity === 'Pune'"
+            (click)="onCityFilterChange('Pune')">
+            📍 Pune
+          </button>
+        </div>
+      </div>
+    } @else if (sessionService.geoAssignment()) {
+      <div class="city-locked-badge">
+        <span class="icon">📍</span>
+        <span>Scoped to Municipal Jurisdiction: <strong>{{ sessionService.geoAssignment()?.cityName }}</strong></span>
+      </div>
+    }
+
+    <!-- Search Box -->
+    <div class="search-box">
+      <input
+        type="text"
+        class="admin-input search-input"
+        placeholder="Search reviews by store, customer name, or keywords..."
+        [(ngModel)]="searchQuery"
+        (keyup.enter)="applySearch()">
+      @if (searchQuery) {
+        <button class="clear-btn" (click)="clearSearch()">✕</button>
+      }
+      <button class="admin-btn btn-primary btn-sm" (click)="applySearch()">Search</button>
+    </div>
+  </div>
+
+  <!-- Star Rating & Status Sub-Filter Bar -->
+  <div class="subfilter-bar">
+    <div class="star-rating-pills">
+      <span class="toolbar-label">Rating:</span>
+      <button
+        type="button"
+        class="star-pill"
+        [class.active]="selectedRating === 'ALL'"
+        (click)="onRatingFilter('ALL')">
+        All Stars
+      </button>
+      <button
+        type="button"
+        class="star-pill"
+        [class.active]="selectedRating === '5'"
+        (click)="onRatingFilter('5')">
+        5 ★
+      </button>
+      <button
+        type="button"
+        class="star-pill"
+        [class.active]="selectedRating === '4'"
+        (click)="onRatingFilter('4')">
+        4 ★
+      </button>
+      <button
+        type="button"
+        class="star-pill"
+        [class.active]="selectedRating === '3'"
+        (click)="onRatingFilter('3')">
+        3 ★
+      </button>
+      <button
+        type="button"
+        class="star-pill"
+        [class.active]="selectedRating === '2'"
+        (click)="onRatingFilter('2')">
+        2 ★
+      </button>
+      <button
+        type="button"
+        class="star-pill danger"
+        [class.active]="selectedRating === '1'"
+        (click)="onRatingFilter('1')">
+        1 ★ (Critical)
+      </button>
+    </div>
+
+    <div class="status-tabs">
+      <button
+        type="button"
+        class="status-tab"
+        [class.active]="selectedStatus === 'ALL'"
+        (click)="onStatusFilter('ALL')">
+        All Statuses
+      </button>
+      <button
+        type="button"
+        class="status-tab"
+        [class.active]="selectedStatus === 'FLAGGED'"
+        (click)="onStatusFilter('FLAGGED')">
+        ⚠️ Flagged
+      </button>
+      <button
+        type="button"
+        class="status-tab"
+        [class.active]="selectedStatus === 'APPROVED'"
+        (click)="onStatusFilter('APPROVED')">
+        ✓ Approved
+      </button>
+      <button
+        type="button"
+        class="status-tab"
+        [class.active]="selectedStatus === 'REMOVED'"
+        (click)="onStatusFilter('REMOVED')">
+        ✕ Removed
+      </button>
+    </div>
+  </div>
+
+  <!-- Reviews Data Table -->
+  <div class="table-card">
+    <admin-data-table
+      [columns]="tableColumns"
+      [data]="store.items()"
+      [totalCount]="store.totalCount()"
+      [loading]="store.loading()"
+      (rowClick)="onRowClick($event)">
+
+      <!-- Rating Column Template -->
+      <ng-template tableCell="rating" let-item>
+        <div class="rating-cell">
+          <span class="stars" [class.low-star]="item.rating <= 2">
+            {{ item.rating }} ★
+          </span>
+          <span class="badge" [ngClass]="'badge-' + getSentimentBadge(item.sentiment).variant">
+            {{ getSentimentBadge(item.sentiment).label }}
+          </span>
+        </div>
+      </ng-template>
+
+      <!-- Target Storefront Column Template -->
+      <ng-template tableCell="merchantName" let-item>
+        <div class="merchant-cell">
+          <span class="merchant-title">{{ item.merchantName }}</span>
+          @if (item.verifiedPurchase) {
+            <span class="verified-chip">✓ Verified Buyer</span>
+          }
+        </div>
+      </ng-template>
+
+      <!-- City & Locality Column Template -->
+      <ng-template tableCell="city" let-item>
+        <div class="geo-cell">
+          <span class="city-badge">📍 {{ item.city }}</span>
+          <span class="locality-text">{{ item.locality }}</span>
+        </div>
+      </ng-template>
+
+      <!-- Review Feedback Snippet Column Template -->
+      <ng-template tableCell="comment" let-item>
+        <div class="comment-cell">
+          <p class="comment-text">"{{ item.comment }}"</p>
+          @if (item.merchantRebuttal) {
+            <span class="rebuttal-chip">Store replied</span>
+          }
+        </div>
+      </ng-template>
+
+      <!-- Status Column Template -->
+      <ng-template tableCell="status" let-item>
+        <admin-reviews-moderation-status-chip [status]="item.status"></admin-reviews-moderation-status-chip>
+      </ng-template>
+
+      <!-- Submitted Date Column Template -->
+      <ng-template tableCell="createdAt" let-item>
+        <div class="date-cell">
+          <span>{{ item.createdAt | date:'shortDate' }}</span>
+          <span class="time-text">{{ item.createdAt | date:'shortTime' }}</span>
+        </div>
+      </ng-template>
+
+    </admin-data-table>
+  </div>
+
+  <!-- Takedown Reason Modal -->
+  @if (showTakedownModal()) {
+    <div class="modal-backdrop" (click)="closeTakedownModal()">
+      <div class="modal-dialog" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Confirm Review Takedown & Policy Sanction</h3>
+          <button class="close-x" (click)="closeTakedownModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <p>
+            You are hiding review <strong>#{{ activeReviewForTakedown()?.id }}</strong> from public consumer display.
+            This action will be attributed to your administrator identity and written to immutable audit logs.
+          </p>
+
+          <div class="form-group">
+            <label class="form-label">Takedown Reason Code:</label>
+            <select class="admin-input" [(ngModel)]="takedownReason">
+              <option value="COMMUNITY_POLICY_VIOLATION">Community Standards Violation</option>
+              <option value="PROFANITY_OR_ABUSE">Profanity, Abusive Language, or Hate Speech</option>
+              <option value="SPAM_OR_BOT_CAMPAIGN">Commercial Spam / External Link Solicitation</option>
+              <option value="MISLEADING_NON_VERIFIED">False Review / Fake Competitor Defamation</option>
+              <option value="RESOLVED_WITH_REFUND">Dispute Amicably Resolved via Merchant Refund</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Mandatory Audit Justification:</label>
+            <textarea
+              class="admin-input text-area"
+              rows="3"
+              placeholder="State clear factual justification for removing this review..."
+              [(ngModel)]="takedownJustification">
+            </textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="admin-btn btn-secondary btn-sm" (click)="closeTakedownModal()">Cancel</button>
+          <button
+            class="admin-btn btn-danger btn-sm"
+            [disabled]="!takedownJustification.trim()"
+            (click)="confirmTakedown()">
+            Confirm Takedown (Remove)
+          </button>
+        </div>
+      </div>
+    </div>
+  }
 </div>

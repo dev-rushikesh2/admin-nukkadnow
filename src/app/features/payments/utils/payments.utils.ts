@@ -1,24 +1,15 @@
-import { PaymentTransactionViewModel } from '../models/payments-view.model';
-
 export function formatPaymentTransactionStatus(status: string): { label: string; variant: 'success' | 'warning' | 'danger' | 'info' | 'neutral' } {
   switch (status.toUpperCase()) {
-    case 'ACTIVE':
-    case 'VERIFIED':
-    case 'CONFIRMED':
+    case 'SETTLED':
+    case 'CAPTURED':
     case 'SUCCESS':
-    case 'HEALTHY':
-      return { label: status, variant: 'success' };
+      return { label: status === 'SETTLED' ? 'Settled to Escrow' : 'Payment Captured', variant: 'success' };
     case 'PENDING':
-    case 'REVIEW':
     case 'PROCESSING':
-    case 'IN_PROGRESS':
-      return { label: status, variant: 'warning' };
-    case 'SUSPENDED':
-    case 'REJECTED':
+      return { label: 'Awaiting Settlement', variant: 'warning' };
     case 'FAILED':
     case 'CANCELLED':
-    case 'DEGRADED':
-      return { label: status, variant: 'danger' };
+      return { label: 'Payment Failed', variant: 'danger' };
     default:
       return { label: status, variant: 'neutral' };
   }

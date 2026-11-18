@@ -17,7 +17,7 @@ import { AdminPermission, AdminPermissions } from '@nukkadnow/admin-access-contr
       <div class="merchant-details-container">
         <admin-page-header
           [title]="m.name + ' (' + m.id + ')'"
-          [subtitle]="'Legal: ' + m.legalEntityName + ' · Locality: ' + m.locality + ' (Nagpur)'"
+          [subtitle]="'Legal Entity: ' + m.legalEntityName + ' · Locality: ' + m.locality"
           breadcrumb="Console / Merchants / Profile">
           <div actions>
             <button class="admin-btn btn-secondary btn-sm" (click)="goBack()">← Back to Directory</button>

@@ -1,19 +1,184 @@
 <div class="localities-page-container">
   <admin-page-header
-    title="Localities & Delivery Zones"
-    subtitle="Nagpur micro-markets, zones, pincode maps and service boundary polygons"
+    [title]="'Localities & Delivery Zones — ' + (sessionService.geoAssignment()?.cityName || (selectedCity() === 'ALL' ? 'Global Grid' : selectedCity()))"
+    subtitle="Manage hyper-local micro-market boundaries, delivery radiuses, and live order congestion"
     breadcrumb="Console / Localities & Delivery Zones">
     <div actions>
-      <button class="admin-btn btn-secondary btn-sm" (click)="refresh()">↻ Refresh</button>
-      <button class="admin-btn btn-primary btn-sm" (click)="exportRecords()">Export CSV</button>
+      <button type="button" class="admin-btn btn-secondary btn-sm" (click)="refresh()">↻ Refresh</button>
+      <button type="button" class="admin-btn btn-secondary btn-sm" (click)="exportCsv()">Export CSV</button>
+      <button type="button" class="admin-btn btn-primary btn-sm" (click)="openAddModal()">+ Add Micro-Market Zone</button>
     </div>
   </admin-page-header>
 
-  <admin-data-table
-    [columns]="tableColumns"
-    [data]="store.items()"
-    [totalCount]="store.totalCount()"
-    [loading]="store.loading()"
-    (rowClick)="onRowClick($event)">
-  </admin-data-table>
+  <!-- City Scope Selection -->
+  @if (sessionService.isRoot() || sessionService.isSuperAdmin()) {
+    <div class="territory-filter-bar">
+      <span class="bar-lbl">Territory Filter:</span>
+      <div class="city-pills">
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'ALL'" (click)="onCityChange('ALL')">All Cities (Global)</button>
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'Nagpur'" (click)="onCityChange('Nagpur')">📍 Nagpur</button>
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'Akola'" (click)="onCityChange('Akola')">📍 Akola</button>
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'Amravati'" (click)="onCityChange('Amravati')">📍 Amravati</button>
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'Pune'" (click)="onCityChange('Pune')">📍 Pune</button>
+      </div>
+    </div>
+  } @else if (sessionService.geoAssignment()) {
+    <div class="geo-locked-banner">
+      <span>📍 Delivery zones and polygon radiuses scoped strictly to <strong>{{ sessionService.geoAssignment()?.cityName }} Municipal Territory</strong></span>
+    </div>
+  }
+
+  <!-- Summary Metric Chips -->
+  <div class="localities-metrics-row">
+    <div class="lmetric-chip blue">
+      <span class="lmetric-val">{{ totalLocalitiesCount() }}</span>
+      <span class="lmetric-lbl">Total Micro-Markets</span>
+    </div>
+    <div class="lmetric-chip green">
+      <span class="lmetric-val">{{ activeGeofencesCount() }}</span>
+      <span class="lmetric-lbl">Active Polygons</span>
+    </div>
+    <div class="lmetric-chip purple">
+      <span class="lmetric-val">{{ coveredPincodesCount() }}</span>
+      <span class="lmetric-lbl">Covered Pincodes</span>
+    </div>
+    <div class="lmetric-chip amber">
+      <span class="lmetric-val">{{ avgDeliveryRadius() }} km</span>
+      <span class="lmetric-lbl">Avg Delivery Radius</span>
+    </div>
+  </div>
+
+  <!-- Operational Filter Toolbar -->
+  <div class="filter-toolbar">
+    <div class="status-tabs">
+      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'ALL'" (click)="onStatusChange('ALL')">
+        All Zones ({{ store.items().length }})
+      </button>
+      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'ACTIVE'" (click)="onStatusChange('ACTIVE')">
+        Active Service
+      </button>
+      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'CONGESTED'" (click)="onStatusChange('CONGESTED')">
+        High Congestion
+      </button>
+      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'MAINTENANCE'" (click)="onStatusChange('MAINTENANCE')">
+        Maintenance
+      </button>
+    </div>
+
+    <div class="search-box">
+      <input
+        type="search"
+        placeholder="Filter by locality name or pincode..."
+        [value]="searchQuery()"
+        (input)="onSearchChange($event)"
+        class="search-input" />
+    </div>
+  </div>
+
+  <!-- Data Table -->
+  <div class="table-container">
+    <admin-data-table
+      [columns]="tableColumns"
+      [data]="filteredLocalities()"
+      [totalCount]="filteredLocalities().length"
+      [loading]="store.loading()"
+      (rowClick)="onRowClick($event)">
+    </admin-data-table>
+  </div>
+
+  <!-- Add Micro-Market Zone Modal -->
+  @if (isAddModalOpen()) {
+    <div class="modal-backdrop" (click)="closeAddModal()">
+      <div class="modal-panel" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div>
+            <h3>Provision Micro-Market Zone</h3>
+            <p>Define new geographic boundaries and delivery SLA limits</p>
+          </div>
+          <button type="button" class="close-btn" (click)="closeAddModal()">✕</button>
+        </div>
+
+        <form (ngSubmit)="submitNewZone()" class="modal-body">
+          <div class="form-group">
+            <label>Micro-Market / Locality Name *</label>
+            <input
+              type="text"
+              name="name"
+              [(ngModel)]="newZone.name"
+              placeholder="e.g. Dhantoli East"
+              required
+              class="form-control" />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>City Territory *</label>
+              @if (sessionService.isRoot() || sessionService.isSuperAdmin()) {
+                <select name="city" [(ngModel)]="newZone.city" class="form-control">
+                  <option value="Nagpur">Nagpur</option>
+                  <option value="Akola">Akola</option>
+                  <option value="Amravati">Amravati</option>
+                  <option value="Pune">Pune</option>
+                </select>
+              } @else {
+                <input type="text" [value]="newZone.city" disabled class="form-control readonly" />
+              }
+            </div>
+
+            <div class="form-group">
+              <label>Postal Code (PIN) *</label>
+              <input
+                type="text"
+                name="pincode"
+                [(ngModel)]="newZone.pincode"
+                placeholder="e.g. 440012"
+                maxlength="6"
+                required
+                class="form-control" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Delivery Radius (km)</label>
+              <input
+                type="number"
+                name="deliveryRadiusKm"
+                [(ngModel)]="newZone.deliveryRadiusKm"
+                min="1"
+                max="25"
+                class="form-control" />
+            </div>
+
+            <div class="form-group">
+              <label>Geofence Polygon Type</label>
+              <select name="geofenceType" [(ngModel)]="newZone.geofenceType" class="form-control">
+                <option value="POLYGON">GPS Polygon (Multi-Point)</option>
+                <option value="RADIUS_CIRCLE">Radial Circle (From Centroid)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Initial Operating State</label>
+            <select name="status" [(ngModel)]="newZone.status" class="form-control">
+              <option value="ACTIVE">ACTIVE — Immediate Launch</option>
+              <option value="CONGESTED">CONGESTED — Throttled Order Intake</option>
+              <option value="MAINTENANCE">MAINTENANCE — Offline Staging</option>
+            </select>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="admin-btn btn-secondary" (click)="closeAddModal()">Cancel</button>
+            <button
+              type="submit"
+              class="admin-btn btn-primary"
+              [disabled]="isSubmitting() || !newZone.name || !newZone.pincode">
+              @if (isSubmitting()) { Provisioning... } @else { Save & Provision Zone }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
 </div>

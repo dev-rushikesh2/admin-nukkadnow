@@ -1,5 +1,177 @@
 .subscriptions-page-container {
   display: flex;
   flex-direction: column;
-  gap: var(--admin-space-md);
+  gap: 20px;
+}
+
+.territory-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--admin-bg-surface);
+  border: 1px solid var(--admin-border-subtle);
+  border-radius: var(--admin-radius-md);
+
+  .bar-lbl {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--admin-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .city-pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+
+    .cpill {
+      border: 1px solid var(--admin-border-subtle);
+      background: transparent;
+      color: var(--admin-text-secondary);
+      padding: 6px 14px;
+      border-radius: var(--admin-radius-full);
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease-in-out;
+
+      &:hover {
+        background: var(--admin-bg-hover);
+        color: var(--admin-text-primary);
+      }
+
+      &.active {
+        background: var(--admin-primary);
+        border-color: var(--admin-primary);
+        color: #ffffff;
+        font-weight: 600;
+      }
+    }
+  }
+}
+
+.geo-locked-banner {
+  padding: 12px 18px;
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.25);
+  border-radius: var(--admin-radius-md);
+  color: var(--admin-text-primary);
+  font-size: 0.88rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.subscriptions-metrics-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+
+  .smetric-chip {
+    display: flex;
+    flex-direction: column;
+    padding: 14px 18px;
+    border-radius: var(--admin-radius-md);
+    background: var(--admin-bg-surface);
+    border: 1px solid var(--admin-border-subtle);
+    box-shadow: var(--admin-shadow-sm);
+
+    .smetric-val {
+      font-size: 1.45rem;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .smetric-lbl {
+      font-size: 0.8rem;
+      color: var(--admin-text-muted);
+      margin-top: 4px;
+      font-weight: 500;
+    }
+
+    &.green {
+      border-left: 4px solid #16a34a;
+      .smetric-val { color: #16a34a; }
+    }
+    &.blue {
+      border-left: 4px solid #2563eb;
+      .smetric-val { color: #2563eb; }
+    }
+    &.amber {
+      border-left: 4px solid #d97706;
+      .smetric-val { color: #d97706; }
+    }
+    &.purple {
+      border-left: 4px solid #9333ea;
+      .smetric-val { color: #9333ea; }
+    }
+  }
+}
+
+.filter-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+
+  .status-tabs {
+    display: flex;
+    background: var(--admin-bg-surface);
+    border: 1px solid var(--admin-border-subtle);
+    border-radius: var(--admin-radius-md);
+    padding: 3px;
+    gap: 2px;
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      padding: 6px 14px;
+      border-radius: var(--admin-radius-sm);
+      color: var(--admin-text-secondary);
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease-in-out;
+
+      &:hover { color: var(--admin-text-primary); }
+
+      &.active {
+        background: var(--admin-bg-hover);
+        color: var(--admin-text-primary);
+        font-weight: 600;
+        box-shadow: var(--admin-shadow-sm);
+      }
+    }
+  }
+
+  .search-box {
+    flex: 1;
+    max-width: 400px;
+
+    .search-input {
+      width: 100%;
+      padding: 8px 14px;
+      border-radius: var(--admin-radius-md);
+      border: 1px solid var(--admin-border-subtle);
+      background: var(--admin-bg-surface);
+      color: var(--admin-text-primary);
+      font-size: 0.88rem;
+
+      &:focus {
+        outline: none;
+        border-color: var(--admin-primary);
+      }
+    }
+  }
+}
+
+.table-container {
+  background: var(--admin-bg-surface);
+  border: 1px solid var(--admin-border-subtle);
+  border-radius: var(--admin-radius-md);
+  overflow: hidden;
+  box-shadow: var(--admin-shadow-sm);
 }

@@ -1,19 +1,67 @@
-<div class="merchant-verification-page-container">
+<div class="kyc-page-container">
   <admin-page-header
-    title="Merchant KYC Verification Queue"
-    subtitle="Government KYC, FSSAI food licenses, GSTIN, and bank account penny-drop audits"
-    breadcrumb="Console / Merchant KYC Verification Queue">
+    title="Merchant KYC & Regulatory Verification Queue"
+    [subtitle]="'Audit government licenses, FSSAI certificates, and automated IMPS penny-drop bank matches for ' + activeCityName()"
+    breadcrumb="Console / Verification Queue">
     <div actions>
-      <button class="admin-btn btn-secondary btn-sm" (click)="refresh()">↻ Refresh</button>
-      <button class="admin-btn btn-primary btn-sm" (click)="exportRecords()">Export CSV</button>
+      <span class="badge badge-warning">SLA Target: &lt; 4 Hours</span>
+      <button type="button" class="admin-btn btn-secondary btn-sm" (click)="loadQueue()">↻ Refresh</button>
     </div>
   </admin-page-header>
 
-  <admin-data-table
-    [columns]="tableColumns"
-    [data]="store.items()"
-    [totalCount]="store.totalCount()"
-    [loading]="store.loading()"
-    (rowClick)="onRowClick($event)">
-  </admin-data-table>
+  <!-- City Scope Filter Bar (for Root & Super Admin) -->
+  @if (sessionService.isRoot() || sessionService.isSuperAdmin()) {
+    <div class="city-selector-bar">
+      <span class="bar-lbl">Territory Filter:</span>
+      <div class="city-pills">
+        <button type="button" class="cpill" [class.active]="selectedCity === 'ALL'" (click)="onCityChange('ALL')">All Cities (Global Queue)</button>
+        <button type="button" class="cpill" [class.active]="selectedCity === 'Nagpur'" (click)="onCityChange('Nagpur')">📍 Nagpur</button>
+        <button type="button" class="cpill" [class.active]="selectedCity === 'Akola'" (click)="onCityChange('Akola')">📍 Akola</button>
+        <button type="button" class="cpill" [class.active]="selectedCity === 'Amravati'" (click)="onCityChange('Amravati')">📍 Amravati</button>
+        <button type="button" class="cpill" [class.active]="selectedCity === 'Pune'" (click)="onCityChange('Pune')">📍 Pune</button>
+      </div>
+    </div>
+  } @else if (sessionService.geoAssignment()) {
+    <div class="geo-locked-banner">
+      <span>📍 KYC verification applications scoped strictly to <strong>{{ sessionService.geoAssignment()?.cityName }} Municipal Territory</strong></span>
+    </div>
+  }
+
+  <!-- Queue Metric Chips -->
+  <div class="kyc-metrics-row">
+    <div class="kmetric-chip amber">
+      <span class="kmetric-val">{{ pendingCount() }}</span>
+      <span class="kmetric-lbl">Pending Compliance Audit</span>
+    </div>
+    <div class="kmetric-chip emerald">
+      <span class="kmetric-val">{{ bankMatchedCount() }}</span>
+      <span class="kmetric-lbl">IMPS Penny-Drop Verified</span>
+    </div>
+    <div class="kmetric-chip blue">
+      <span class="kmetric-val">{{ queue().length }}</span>
+      <span class="kmetric-lbl">Total Applications</span>
+    </div>
+  </div>
+
+  <!-- Seller Mode Filter Toolbar -->
+  <div class="mode-filter-bar">
+    <span class="filter-lbl">Seller Category:</span>
+    <div class="filter-tabs">
+      <button type="button" class="ftab" [class.active]="selectedMode === ''" (click)="filterMode('')">All Categories</button>
+      <button type="button" class="ftab" [class.active]="selectedMode === 'RETAIL'" (click)="filterMode('RETAIL')">Retail / Kirana</button>
+      <button type="button" class="ftab" [class.active]="selectedMode === 'FOOD_STALL'" (click)="filterMode('FOOD_STALL')">Food & Dairy</button>
+      <button type="button" class="ftab" [class.active]="selectedMode === 'HOME_MAKER'" (click)="filterMode('HOME_MAKER')">Home Maker</button>
+      <button type="button" class="ftab" [class.active]="selectedMode === 'ARTISAN'" (click)="filterMode('ARTISAN')">Artisan Maker</button>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <admin-data-table
+      [columns]="tableColumns"
+      [data]="queue()"
+      [totalCount]="queue().length"
+      [loading]="loading()"
+      (rowClick)="onRowClick($event)">
+    </admin-data-table>
+  </div>
 </div>

@@ -1,24 +1,19 @@
-import { OutletViewModel } from '../models/outlets-view.model';
-
 export function formatOutletStatus(status: string): { label: string; variant: 'success' | 'warning' | 'danger' | 'info' | 'neutral' } {
   switch (status.toUpperCase()) {
+    case 'OPEN':
     case 'ACTIVE':
-    case 'VERIFIED':
-    case 'CONFIRMED':
-    case 'SUCCESS':
     case 'HEALTHY':
-      return { label: status, variant: 'success' };
-    case 'PENDING':
-    case 'REVIEW':
-    case 'PROCESSING':
-    case 'IN_PROGRESS':
-      return { label: status, variant: 'warning' };
+      return { label: 'Accepting Orders', variant: 'success' };
+    case 'BUSY':
+    case 'THROTTLED':
+      return { label: 'At Peak Capacity', variant: 'warning' };
+    case 'PAUSED':
+    case 'MAINTENANCE':
+      return { label: 'Paused by Store', variant: 'info' };
+    case 'CLOSED':
     case 'SUSPENDED':
-    case 'REJECTED':
-    case 'FAILED':
-    case 'CANCELLED':
-    case 'DEGRADED':
-      return { label: status, variant: 'danger' };
+    case 'INACTIVE':
+      return { label: 'Closed / Offline', variant: 'danger' };
     default:
       return { label: status, variant: 'neutral' };
   }

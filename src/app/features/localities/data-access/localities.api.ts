@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, of } from 'rxjs';
+import { Observable } from 'rxjs';
 import { AdminApiClient, ApiResponse, PaginatedResult } from '@nukkadnow/admin-api-client';
 import { LocalityViewModel, LocalityFilterCriteria } from '../models/localities-view.model';
 
@@ -18,7 +18,15 @@ export class LocalitiesApi {
     return this.client.get<LocalityViewModel>(`${this.endpoint}/${id}`);
   }
 
-  updateStatus(id: string, status: string, reasonCode?: string): Observable<ApiResponse<LocalityViewModel>> {
-    return this.client.patch<LocalityViewModel>(`${this.endpoint}/${id}/status`, { status }, { reasonCode });
+  createZone(payload: Partial<LocalityViewModel>): Observable<ApiResponse<LocalityViewModel>> {
+    return this.client.post<LocalityViewModel>(this.endpoint, payload);
+  }
+
+  updateStatus(id: string, status: string, reasonCode?: string, congestionMultiplier?: number): Observable<ApiResponse<LocalityViewModel>> {
+    return this.client.patch<LocalityViewModel>(
+      `${this.endpoint}/${id}/status`,
+      { status, congestionMultiplier },
+      { reasonCode: reasonCode || 'LOCALITY_STATUS_TUNING' }
+    );
   }
 }

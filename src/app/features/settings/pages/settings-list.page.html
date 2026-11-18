@@ -1,19 +1,232 @@
-<div class="settings-page-container">
+<div class="settings-container">
   <admin-page-header
-    title="Platform Settings & Policies"
-    subtitle="Platform maintenance mode, security timeouts, IP whitelisting and compliance defaults"
-    breadcrumb="Console / Platform Settings & Policies">
-    <div actions>
-      <button class="admin-btn btn-secondary btn-sm" (click)="refresh()">↻ Refresh</button>
-      <button class="admin-btn btn-primary btn-sm" (click)="exportRecords()">Export CSV</button>
+    title="Platform Governance & Security Settings"
+    subtitle="Emergency circuit breaker controls, inactivity session locks, password policies, and financial approval thresholds."
+    breadcrumb="Console / Platform Governance / Platform Settings">
+    <div actions class="header-actions">
+      @if (isSavedToast()) {
+        <span class="saved-indicator">✓ Settings Saved & Logged</span>
+      }
+      <button class="admin-btn btn-secondary btn-sm" (click)="refresh()">
+        ↻ Reset to Current
+      </button>
+      <button class="admin-btn btn-primary btn-sm" (click)="openSaveDialog()">
+        💾 Save Governance Settings
+      </button>
     </div>
   </admin-page-header>
 
-  <admin-data-table
-    [columns]="tableColumns"
-    [data]="store.items()"
-    [totalCount]="store.totalCount()"
-    [loading]="store.loading()"
-    (rowClick)="onRowClick($event)">
-  </admin-data-table>
+  <div class="settings-sections-grid">
+    <!-- Section 1: Platform Maintenance Mode Switch -->
+    <div class="settings-card" [class.danger-highlight]="maintenanceMode">
+      <div class="card-header">
+        <div class="title-area">
+          <span class="card-icon">🚨</span>
+          <div>
+            <h3>Emergency Platform Maintenance Mode</h3>
+            <p>Suspends storefront discovery and checkout while leaving active order pickups accessible</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          class="toggle-switch-btn"
+          [class.on]="maintenanceMode"
+          (click)="maintenanceMode = !maintenanceMode">
+          {{ maintenanceMode ? 'ACTIVE (SYSTEM LOCKED)' : 'NORMAL (PLATFORM LIVE)' }}
+        </button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">User-Facing Announcement Banner:</label>
+        <textarea
+          class="admin-input banner-textarea"
+          rows="2"
+          placeholder="Enter custom maintenance banner text displayed to consumers and merchants..."
+          [(ngModel)]="maintenanceBanner">
+        </textarea>
+        <span class="field-hint">Displayed prominently across consumer app, merchant POS, and website headers.</span>
+      </div>
+    </div>
+
+    <!-- Section 2: Security & Session Policies -->
+    <div class="settings-card">
+      <div class="card-header">
+        <div class="title-area">
+          <span class="card-icon">🔒</span>
+          <div>
+            <h3>Session Inactivity & Authentication Policies</h3>
+            <p>Mandatory security limits across all administrative hierarchy levels</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-fields-grid">
+        <div class="form-group">
+          <div class="label-with-val">
+            <label class="form-label">Admin Screen Inactivity Lockout:</label>
+            <span class="val-badge font-mono">{{ inactivityLockMinutes }} minutes</span>
+          </div>
+          <input
+            type="range"
+            class="range-slider"
+            min="5"
+            max="60"
+            step="5"
+            [(ngModel)]="inactivityLockMinutes">
+          <span class="field-hint">Auto-locks operator session with PIN/password challenge upon idle threshold.</span>
+        </div>
+
+        <div class="form-group checkbox-row">
+          <label class="toggle-checkbox-label">
+            <input type="checkbox" [(ngModel)]="enforceMfa">
+            <span class="toggle-text">
+              <strong>Enforce Step-Up MFA for High-Privilege Interventions</strong>
+              <small>Requires Time-Based OTP (TOTP) for pricing caps, refunds > ₹5,000, and cache flushes.</small>
+            </span>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Minimum Admin Password Length:</label>
+          <input
+            type="number"
+            class="admin-input"
+            min="8"
+            max="32"
+            [(ngModel)]="passwordMinLength">
+          <span class="field-hint">Enforces uppercase, lowercase, numbers, and symbols.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3: Financial Risk & Refund Ceilings -->
+    <div class="settings-card">
+      <div class="card-header">
+        <div class="title-area">
+          <span class="card-icon">💳</span>
+          <div>
+            <h3>Financial Risk & Approval Thresholds</h3>
+            <p>SLA windows and dual-sign authorization ceilings</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-fields-grid">
+        <div class="form-group">
+          <label class="form-label">Customer Immediate Cancellation Window (Minutes):</label>
+          <input
+            type="number"
+            class="admin-input"
+            min="1"
+            max="15"
+            [(ngModel)]="maxCancellationWindowMins">
+          <span class="field-hint">Period after payment where customer can cancel with 100% instant auto-refund.</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Single-Sign Auto-Approval Refund Limit (₹):</label>
+          <input
+            type="number"
+            class="admin-input"
+            min="100"
+            max="2000"
+            step="50"
+            [(ngModel)]="autoApproveRefundThresholdRupees">
+          <span class="field-hint">Refunds up to this limit can be approved by a single City Operations Manager.</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Dual-Sign Escalation Ceiling Threshold (₹):</label>
+          <input
+            type="number"
+            class="admin-input"
+            min="1000"
+            max="20000"
+            step="500"
+            [(ngModel)]="dualSignRefundThresholdRupees">
+          <span class="field-hint">Disputes exceeding this amount strictly require dual-sign approval by Root Admin.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 4: Compliance & Support Contacts -->
+    <div class="settings-card">
+      <div class="card-header">
+        <div class="title-area">
+          <span class="card-icon">📞</span>
+          <div>
+            <h3>Statutory Grievance & Compliance Hotlines</h3>
+            <p>Official communication channels under Consumer Protection E-Commerce Rules</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-fields-grid">
+        <div class="form-group">
+          <label class="form-label">Emergency Operational Hotline:</label>
+          <input
+            type="text"
+            class="admin-input"
+            placeholder="+91 712 298 0000"
+            [(ngModel)]="supportHotline">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Chief Compliance Officer Email:</label>
+          <input
+            type="email"
+            class="admin-input"
+            placeholder="compliance@nukkadnow.com"
+            [(ngModel)]="complianceEmail">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mandatory Audit Reason Modal -->
+  @if (showSaveModal()) {
+    <div class="modal-backdrop" (click)="closeSaveDialog()">
+      <div class="modal-dialog" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Commit Platform Governance Changes</h3>
+          <button class="close-x" (click)="closeSaveDialog()">✕</button>
+        </div>
+        <div class="modal-body">
+          <p>
+            You are updating global platform operational policies. This modification will be logged with your
+            administrator credentials in the cryptographic audit trail.
+          </p>
+
+          <div class="form-group">
+            <label class="form-label">Policy Reason Code:</label>
+            <select class="admin-input" [(ngModel)]="saveAuditReason">
+              <option value="OPERATIONAL_POLICY_UPDATE">Standard Operational Policy Tuning</option>
+              <option value="EMERGENCY_MAINTENANCE">Emergency Incident / Downtime Maintenance</option>
+              <option value="STATUTORY_COMPLIANCE">Statutory Regulatory Mandate Update</option>
+              <option value="SECURITY_HARDENING">Security Baseline & Inactivity Hardening</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Mandatory Factual Justification:</label>
+            <textarea
+              class="admin-input"
+              rows="3"
+              placeholder="State clear factual justification for updating these settings..."
+              [(ngModel)]="saveJustification">
+            </textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="admin-btn btn-secondary btn-sm" (click)="closeSaveDialog()">Cancel</button>
+          <button
+            class="admin-btn btn-primary btn-sm"
+            [disabled]="!saveJustification.trim()"
+            (click)="confirmSave()">
+            ✓ Commit Changes
+          </button>
+        </div>
+      </div>
+    </div>
+  }
 </div>

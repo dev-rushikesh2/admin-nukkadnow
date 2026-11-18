@@ -32,6 +32,72 @@
   100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 
+/* City Filter Toolbar */
+.city-filter-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--admin-bg-surface);
+  border: 1px solid var(--admin-border-subtle);
+  border-radius: var(--admin-radius-md);
+  padding: 8px 16px;
+  box-shadow: var(--admin-shadow-sm);
+  flex-wrap: wrap;
+}
+
+.filter-label {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--admin-text-secondary);
+}
+
+.filter-pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.city-pill {
+  background: var(--admin-bg-canvas);
+  border: 1px solid var(--admin-border-subtle);
+  border-radius: var(--admin-radius-full);
+  padding: 4px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--admin-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    border-color: var(--admin-primary);
+    color: var(--admin-text-primary);
+    background: var(--admin-bg-hover);
+  }
+
+  &.active {
+    background: var(--admin-primary-light);
+    border-color: var(--admin-primary);
+    color: var(--admin-primary);
+    font-weight: 700;
+  }
+}
+
+.assigned-city-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: var(--admin-radius-md);
+  padding: 8px 16px;
+  font-size: 0.8125rem;
+  color: #065f46;
+
+  .banner-icon {
+    font-size: 1rem;
+  }
+}
+
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -56,6 +122,8 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  box-shadow: var(--admin-shadow-sm);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .card-title-bar {
@@ -66,7 +134,7 @@
   h3 {
     margin: 0;
     font-size: 1rem;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--admin-text-primary);
   }
 }
@@ -79,7 +147,7 @@
 
 .locality-row {
   display: grid;
-  grid-template-columns: 180px 1fr 100px;
+  grid-template-columns: 180px 1fr 110px;
   align-items: center;
   gap: 16px;
   padding: 8px 0;
@@ -109,31 +177,32 @@
 .pressure-bar-container {
   height: 8px;
   background: var(--admin-bg-subtle);
-  border-radius: var(--admin-radius-full);
+  border-radius: 4px;
   overflow: hidden;
 }
 
 .pressure-fill {
   height: 100%;
-  border-radius: var(--admin-radius-full);
+  border-radius: 4px;
+  background-color: var(--admin-success);
+  transition: width 0.3s ease;
 
-  &.normal {
-    background: var(--admin-primary);
+  &.warning {
+    background-color: var(--admin-warning);
   }
-
-  &.high {
-    background: var(--admin-warning);
+  &.high, &.danger {
+    background-color: var(--admin-danger);
   }
 }
 
 .pressure-label {
   font-size: 0.75rem;
+  font-weight: 600;
   text-align: right;
   color: var(--admin-text-secondary);
 
   &.warning {
-    color: var(--admin-warning);
-    font-weight: 600;
+    color: var(--admin-danger);
   }
 }
 
@@ -147,25 +216,23 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px;
-  background: var(--admin-bg-subtle);
-  border: 1px solid var(--admin-border-subtle);
+  padding: 10px 12px;
   border-radius: var(--admin-radius-sm);
+  background: var(--admin-bg-canvas);
+  border: 1px solid var(--admin-border-subtle);
   transition: border-color 0.15s ease;
 
   &:hover {
-    border-color: var(--admin-border-default);
-  }
-
-  &.urgent {
-    border-left: 3px solid var(--admin-warning);
+    border-color: var(--admin-primary);
   }
 
   &.danger {
     border-left: 3px solid var(--admin-danger);
   }
-
   &.warning {
+    border-left: 3px solid var(--admin-warning);
+  }
+  &.info {
     border-left: 3px solid var(--admin-info);
   }
 }
@@ -175,10 +242,9 @@
 }
 
 .triage-content {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  flex: 1;
-  gap: 2px;
 }
 
 .triage-title {
@@ -188,6 +254,13 @@
 }
 
 .triage-meta {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   color: var(--admin-text-muted);
+}
+
+.empty-state-hint {
+  padding: 24px;
+  text-align: center;
+  color: var(--admin-text-muted);
+  font-size: 0.8125rem;
 }

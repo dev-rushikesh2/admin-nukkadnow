@@ -11,20 +11,28 @@ import { PaginatedResult } from '@nukkadnow/admin-api-client';
 export class SettingsRepository {
   private readonly api = inject(SettingsApi);
 
+  fetchSettings(): Observable<PlatformSettingViewModel> {
+    return this.api.getSettings().pipe(map(res => SettingsMapper.toViewModel(res.data)));
+  }
+
+  updateSettings(body: Partial<PlatformSettingViewModel>, reasonCode?: string): Observable<PlatformSettingViewModel> {
+    return this.api.saveSettings(body, reasonCode).pipe(map(res => SettingsMapper.toViewModel(res.data)));
+  }
+
   fetchItems(filters?: PlatformSettingFilterCriteria): Observable<PaginatedResult<PlatformSettingViewModel>> {
-    return this.api.getItems(filters).pipe(
-      map(res => ({
-        ...res.data,
-        items: res.data.items.map(SettingsMapper.toViewModel)
+    return this.fetchSettings().pipe(
+      map(s => ({
+        items: [s],
+        total: 1,
+        page: 1,
+        limit: 10,
+        totalPages: 1,
+        hasMore: false,
       }))
     );
   }
 
   fetchById(id: string): Observable<PlatformSettingViewModel> {
-    return this.api.getById(id).pipe(map(res => SettingsMapper.toViewModel(res.data)));
-  }
-
-  changeStatus(id: string, status: string, reasonCode?: string): Observable<PlatformSettingViewModel> {
-    return this.api.updateStatus(id, status, reasonCode).pipe(map(res => SettingsMapper.toViewModel(res.data)));
+    return this.fetchSettings();
   }
 }

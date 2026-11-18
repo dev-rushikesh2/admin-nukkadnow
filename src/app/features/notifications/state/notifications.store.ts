@@ -1,4 +1,5 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
+import { Observable, tap } from 'rxjs';
 import { NotificationsRepository } from '../data-access/notifications.repository';
 import { BroadcastNotificationViewModel, BroadcastNotificationFilterCriteria } from '../models/notifications-view.model';
 
@@ -49,5 +50,16 @@ export class NotificationsStore {
         this.loadingState.set(false);
       }
     });
+  }
+
+  createItem(payload: Partial<BroadcastNotificationViewModel>): Observable<BroadcastNotificationViewModel> {
+    this.loadingState.set(true);
+    return this.repository.createItem(payload).pipe(
+      tap((newItem) => {
+        this.itemsState.update(list => [newItem, ...list]);
+        this.totalCountState.update(t => t + 1);
+        this.loadingState.set(false);
+      })
+    );
   }
 }

@@ -1,4 +1,6 @@
-import { Injectable, signal, computed, inject } from '@angular/core';
+import { Injectable, signal, inject } from '@angular/core';
+import { Observable } from 'rxjs';
+import { tap } from 'rxjs/operators';
 import { PlansPricingRepository } from '../data-access/plans-pricing.repository';
 import { PricingPlanViewModel, PricingPlanFilterCriteria } from '../models/plans-pricing-view.model';
 
@@ -31,7 +33,7 @@ export class PlansPricingStore {
         this.loadingState.set(false);
       },
       error: (err) => {
-        this.errorState.set(err?.message || 'Failed to load records');
+        this.errorState.set(err?.message || 'Failed to load pricing plans');
         this.loadingState.set(false);
       }
     });
@@ -45,9 +47,31 @@ export class PlansPricingStore {
         this.loadingState.set(false);
       },
       error: (err) => {
-        this.errorState.set(err?.message || 'Failed to load record');
+        this.errorState.set(err?.message || 'Failed to load plan details');
         this.loadingState.set(false);
       }
     });
+  }
+
+  createPlan(payload: Partial<PricingPlanViewModel>): Observable<PricingPlanViewModel> {
+    return this.repository.createPlan(payload).pipe(
+      tap((newPlan) => {
+        this.itemsState.update((items) => [...items, newPlan]);
+        this.totalCountState.update((c) => c + 1);
+      })
+    );
+  }
+
+  updatePlan(id: string, payload: Partial<PricingPlanViewModel>, reasonCode?: string): Observable<PricingPlanViewModel> {
+    return this.repository.updatePlan(id, payload, reasonCode).pipe(
+      tap((updated) => {
+        this.itemsState.update((items) =>
+          items.map((plan) => (plan.id === id ? { ...plan, ...updated } : plan))
+        );
+        if (this.selectedItemState()?.id === id) {
+          this.selectedItemState.set(updated);
+        }
+      })
+    );
   }
 }

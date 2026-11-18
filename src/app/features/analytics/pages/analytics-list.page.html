@@ -1,19 +1,221 @@
-<div class="analytics-page-container">
+<div class="analytics-container">
   <admin-page-header
-    title="Analytics & Heatmaps"
-    subtitle="Executive GMV reports, merchant cohort retention and Nagpur locality order density"
-    breadcrumb="Console / Analytics & Heatmaps">
-    <div actions>
-      <button class="admin-btn btn-secondary btn-sm" (click)="refresh()">↻ Refresh</button>
-      <button class="admin-btn btn-primary btn-sm" (click)="exportRecords()">Export CSV</button>
+    [title]="'Enterprise Financial & Business Analytics — ' + activeCityName()"
+    subtitle="Audited GMV metrics, statutory tax split, take-rate commission, and micro-market locality revenues."
+    breadcrumb="Console / Governance / Business Analytics">
+    <div actions class="header-actions">
+      <button class="admin-btn btn-secondary btn-sm" (click)="fetchData()">
+        ↻ Refresh
+      </button>
+      <button class="admin-btn btn-primary btn-sm" (click)="exportFinancialReport()">
+        📊 Export Audited Financial Report (CSV)
+      </button>
     </div>
   </admin-page-header>
 
-  <admin-data-table
-    [columns]="tableColumns"
-    [data]="store.items()"
-    [totalCount]="store.totalCount()"
-    [loading]="store.loading()"
-    (rowClick)="onRowClick($event)">
-  </admin-data-table>
+  <!-- Filter & Timeframe Toolbar -->
+  <div class="filter-toolbar">
+    <!-- City Territory Scope Selector (Global Admins only) -->
+    @if (sessionService.isRoot() || sessionService.isSuperAdmin()) {
+      <div class="city-selector-group">
+        <label class="toolbar-label">Territory Scope:</label>
+        <div class="pill-buttons">
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="selectedCity === 'ALL'"
+            (click)="onCityFilterChange('ALL')">
+            🌐 Multi-City Network
+          </button>
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="selectedCity === 'Nagpur'"
+            (click)="onCityFilterChange('Nagpur')">
+            📍 Nagpur
+          </button>
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="selectedCity === 'Akola'"
+            (click)="onCityFilterChange('Akola')">
+            📍 Akola
+          </button>
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="selectedCity === 'Amravati'"
+            (click)="onCityFilterChange('Amravati')">
+            📍 Amravati
+          </button>
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="selectedCity === 'Pune'"
+            (click)="onCityFilterChange('Pune')">
+            📍 Pune
+          </button>
+        </div>
+      </div>
+    } @else if (sessionService.geoAssignment()) {
+      <div class="city-locked-badge">
+        <span class="icon">📍</span>
+        <span>Scoped to Municipal Jurisdiction: <strong>{{ sessionService.geoAssignment()?.cityName }}</strong></span>
+      </div>
+    }
+
+    <!-- Timeframe Selector -->
+    <div class="timeframe-group">
+      <label class="toolbar-label">Period:</label>
+      <div class="timeframe-buttons">
+        <button
+          type="button"
+          class="tf-btn"
+          [class.active]="selectedRange === 'TODAY'"
+          (click)="onRangeChange('TODAY')">
+          Today
+        </button>
+        <button
+          type="button"
+          class="tf-btn"
+          [class.active]="selectedRange === '7D'"
+          (click)="onRangeChange('7D')">
+          Last 7 Days
+        </button>
+        <button
+          type="button"
+          class="tf-btn"
+          [class.active]="selectedRange === 'MTD'"
+          (click)="onRangeChange('MTD')">
+          Month to Date (MTD)
+        </button>
+        <button
+          type="button"
+          class="tf-btn"
+          [class.active]="selectedRange === 'CUSTOM'"
+          (click)="onRangeChange('CUSTOM')">
+          Quarter
+        </button>
+      </div>
+    </div>
+  </div>
+
+  @if (store.metrics(); as data) {
+    <!-- Primary Financial KPI Cards -->
+    <div class="financial-kpi-grid">
+      <div class="fin-card primary">
+        <div class="card-icon">💰</div>
+        <div class="card-content">
+          <span class="card-label">Gross Merchandise Value (GMV)</span>
+          <span class="card-val">{{ data.todayGmvPaise | inrCurrency }}</span>
+          <span class="card-hint">Total consumer spend across stores</span>
+        </div>
+      </div>
+
+      <div class="fin-card success">
+        <div class="card-icon">📈</div>
+        <div class="card-content">
+          <span class="card-label">Platform Net Commission</span>
+          <span class="card-val text-accent">{{ data.commissionEarnedPaise | inrCurrency }}</span>
+          <span class="card-hint">Average take rate: ~6.5%</span>
+        </div>
+      </div>
+
+      <div class="fin-card info">
+        <div class="card-icon">🏦</div>
+        <div class="card-content">
+          <span class="card-label">Merchant Net Settlements</span>
+          <span class="card-val">{{ data.merchantPayoutsPaise | inrCurrency }}</span>
+          <span class="card-hint">Released via automated penny-drop escrow</span>
+        </div>
+      </div>
+
+      <div class="fin-card neutral">
+        <div class="card-icon">🛍️</div>
+        <div class="card-content">
+          <span class="card-label">Orders & Avg Basket Value</span>
+          <span class="card-val">{{ data.totalOrders }} <small class="unit-text">orders</small></span>
+          <span class="card-hint">AOV: {{ data.averageOrderValuePaise | inrCurrency }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Analytics Double Column Layout -->
+    <div class="analytics-layout-grid">
+      <!-- Locality Revenue Contribution Breakdown -->
+      <div class="data-panel-card">
+        <div class="panel-header">
+          <div class="title-group">
+            <h3>Micro-Market Locality Revenues</h3>
+            <p>Geographic fulfillment volume and gross margin distribution</p>
+          </div>
+          <span class="badge badge-info">Audited Ledger</span>
+        </div>
+
+        <div class="locality-table-wrapper">
+          <table class="metrics-table">
+            <thead>
+              <tr>
+                <th>Locality / Micro-Market</th>
+                <th class="text-right">Orders</th>
+                <th class="text-right">Gross GMV</th>
+                <th style="width: 140px;">Share</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (loc of data.localityBreakdown; track loc.locality) {
+                <tr>
+                  <td>
+                    <strong>{{ loc.locality }}</strong>
+                  </td>
+                  <td class="text-right font-mono">{{ loc.ordersCount | number }}</td>
+                  <td class="text-right font-mono font-bold">{{ loc.gmvPaise | inrCurrency }}</td>
+                  <td>
+                    <div class="share-cell">
+                      <div class="share-bar">
+                        <div class="bar-fill" [style.width.%]="loc.sharePercent"></div>
+                      </div>
+                      <span class="share-text font-mono">{{ loc.sharePercent }}%</span>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Top Performing Merchants Leaderboard -->
+      <div class="data-panel-card">
+        <div class="panel-header">
+          <div class="title-group">
+            <h3>Top Performing Storefronts</h3>
+            <p>Highest order velocity and fulfillment reliability</p>
+          </div>
+          <span class="badge badge-success">Top Tier</span>
+        </div>
+
+        <div class="merchants-leaderboard">
+          @for (merchant of data.topMerchants; track merchant.id; let idx = $index) {
+            <div class="merchant-rank-row">
+              <div class="rank-badge" [class.gold]="idx === 0" [class.silver]="idx === 1" [class.bronze]="idx === 2">
+                #{{ idx + 1 }}
+              </div>
+              <div class="merchant-info">
+                <span class="merchant-name">{{ merchant.name }}</span>
+                <span class="merchant-city">📍 {{ merchant.city }} • {{ merchant.orders }} fulfilled orders</span>
+              </div>
+              <div class="merchant-gmv">
+                <span class="gmv-val">{{ merchant.gmvPaise | inrCurrency }}</span>
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="panel-footer-note">
+          <span>* Minimum 98% counter pickup compliance required to retain Top Tier platform placement.</span>
+        </div>
+      </div>
+    </div>
+  }
 </div>

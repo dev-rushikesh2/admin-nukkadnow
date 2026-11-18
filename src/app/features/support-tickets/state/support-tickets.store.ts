@@ -1,4 +1,6 @@
-import { Injectable, signal, computed, inject } from '@angular/core';
+import { Injectable, signal, inject } from '@angular/core';
+import { Observable } from 'rxjs';
+import { tap } from 'rxjs/operators';
 import { SupportTicketsRepository } from '../data-access/support-tickets.repository';
 import { SupportTicketViewModel, SupportTicketFilterCriteria } from '../models/support-tickets-view.model';
 
@@ -31,7 +33,7 @@ export class SupportTicketsStore {
         this.loadingState.set(false);
       },
       error: (err) => {
-        this.errorState.set(err?.message || 'Failed to load records');
+        this.errorState.set(err?.message || 'Failed to load support tickets');
         this.loadingState.set(false);
       }
     });
@@ -45,9 +47,35 @@ export class SupportTicketsStore {
         this.loadingState.set(false);
       },
       error: (err) => {
-        this.errorState.set(err?.message || 'Failed to load record');
+        this.errorState.set(err?.message || 'Failed to load ticket details');
         this.loadingState.set(false);
       }
     });
+  }
+
+  addMessage(id: string, text: string, isInternal: boolean): Observable<SupportTicketViewModel> {
+    return this.repository.addMessage(id, text, isInternal).pipe(
+      tap((updated) => {
+        this.itemsState.update((items) =>
+          items.map((t) => (t.id === id ? { ...t, ...updated } : t))
+        );
+        if (this.selectedItemState()?.id === id) {
+          this.selectedItemState.set(updated);
+        }
+      })
+    );
+  }
+
+  updateStatus(id: string, status: string, reasonCode?: string): Observable<SupportTicketViewModel> {
+    return this.repository.changeStatus(id, status, reasonCode).pipe(
+      tap((updated) => {
+        this.itemsState.update((items) =>
+          items.map((t) => (t.id === id ? { ...t, ...updated, status: status as any } : t))
+        );
+        if (this.selectedItemState()?.id === id) {
+          this.selectedItemState.update((curr) => curr ? { ...curr, ...updated, status: status as any } : null);
+        }
+      })
+    );
   }
 }

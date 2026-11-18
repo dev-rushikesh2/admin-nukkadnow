@@ -1,4 +1,5 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
+import { Observable, tap } from 'rxjs';
 import { ReviewsModerationRepository } from '../data-access/reviews-moderation.repository';
 import { ReviewModerationViewModel, ReviewModerationFilterCriteria } from '../models/reviews-moderation-view.model';
 
@@ -49,5 +50,18 @@ export class ReviewsModerationStore {
         this.loadingState.set(false);
       }
     });
+  }
+
+  updateStatus(id: string, status: string, reasonCode?: string): Observable<ReviewModerationViewModel> {
+    this.loadingState.set(true);
+    return this.repository.changeStatus(id, status, reasonCode).pipe(
+      tap((updated) => {
+        this.itemsState.update(list => list.map(item => item.id === id ? updated : item));
+        if (this.selectedItemState()?.id === id) {
+          this.selectedItemState.set(updated);
+        }
+        this.loadingState.set(false);
+      })
+    );
   }
 }

@@ -2,7 +2,7 @@
   <!-- Header with Live System Status -->
   <admin-page-header
     title="Platform Operations Command Center"
-    subtitle="Nagpur Locality Pilot · Real-Time Commerce Telemetry & Safety"
+    subtitle="Real-time multi-city commerce telemetry, order tracking & safety governance"
     breadcrumb="Console / Command Center">
     <div actions>
       <div class="system-status-indicator">
@@ -15,10 +15,59 @@
     </div>
   </admin-page-header>
 
+  <!-- City Scope Filter Toolbar (Root & Super Admin can switch; City Manager is locked) -->
+  @if (sessionService.isRoot() || sessionService.isSuperAdmin()) {
+    <div class="city-filter-toolbar">
+      <span class="filter-label">Municipal Jurisdiction:</span>
+      <div class="filter-pills">
+        <button 
+          type="button" 
+          class="city-pill" 
+          [class.active]="selectedCityFilter() === 'ALL'" 
+          (click)="setCityFilter('ALL')">
+          🌐 All Cities (Global Command)
+        </button>
+        <button 
+          type="button" 
+          class="city-pill" 
+          [class.active]="selectedCityFilter() === 'Nagpur'" 
+          (click)="setCityFilter('Nagpur')">
+          📍 Nagpur
+        </button>
+        <button 
+          type="button" 
+          class="city-pill" 
+          [class.active]="selectedCityFilter() === 'Akola'" 
+          (click)="setCityFilter('Akola')">
+          📍 Akola
+        </button>
+        <button 
+          type="button" 
+          class="city-pill" 
+          [class.active]="selectedCityFilter() === 'Amravati'" 
+          (click)="setCityFilter('Amravati')">
+          📍 Amravati
+        </button>
+        <button 
+          type="button" 
+          class="city-pill" 
+          [class.active]="selectedCityFilter() === 'Pune'" 
+          (click)="setCityFilter('Pune')">
+          📍 Pune
+        </button>
+      </div>
+    </div>
+  } @else if (sessionService.geoAssignment()) {
+    <div class="assigned-city-banner">
+      <span class="banner-icon">📍</span>
+      <span>Operating under <strong>{{ sessionService.geoAssignment()?.cityName }} Municipal Territory</strong> ({{ sessionService.geoAssignment()?.state }}) · Cross-city access isolated</span>
+    </div>
+  }
+
   <!-- High-Level KPI Metric Tiles -->
   <div class="metrics-grid">
     <admin-metric-card
-      title="Today's GMV (Nagpur)"
+      [title]="'Today\'s GMV (' + activeCityScopeName() + ')'"
       [value]="metrics()?.todayGmv || '₹ 0.00'"
       [delta]="metrics()?.todayGmvDelta || '+0%'"
       deltaType="positive"
@@ -78,24 +127,30 @@
     <!-- Left Column: Locality Performance & Queue Pressure -->
     <div class="dashboard-card">
       <div class="card-title-bar">
-        <h3>📍 Locality Fulfillment Pressure (Nagpur)</h3>
+        <h3>📍 Locality Fulfillment Pressure ({{ activeCityScopeName() }})</h3>
         <span class="badge badge-info">Live Stream</span>
       </div>
 
       <div class="locality-breakdown-list">
-        @for (loc of localityFulfillment(); track loc.name) {
-          <div class="locality-row">
-            <div class="locality-info">
-              <span class="locality-name">{{ loc.name }}</span>
-              <span class="locality-stats">{{ loc.outlets }} Outlets · {{ loc.activeBatches }} Active Batches</span>
-            </div>
-            <div class="pressure-bar-container">
-              <div class="pressure-fill" [ngClass]="loc.status" [style.width.%]="loc.pressure"></div>
-            </div>
-            <span class="pressure-label" [ngClass]="{ warning: loc.status === 'high' }">
-              {{ loc.status | titlecase }} ({{ loc.pressure }}%)
-            </span>
+        @if (localityFulfillment().length === 0) {
+          <div class="empty-state-hint">
+            <span>No localized fulfillment pressure reported in current jurisdiction.</span>
           </div>
+        } @else {
+          @for (loc of localityFulfillment(); track loc.name) {
+            <div class="locality-row">
+              <div class="locality-info">
+                <span class="locality-name">{{ loc.name }}</span>
+                <span class="locality-stats">{{ loc.outlets }} Outlets · {{ loc.activeBatches }} Active Batches</span>
+              </div>
+              <div class="pressure-bar-container">
+                <div class="pressure-fill" [ngClass]="loc.status" [style.width.%]="loc.pressure"></div>
+              </div>
+              <span class="pressure-label" [ngClass]="{ warning: loc.status === 'high' }">
+                {{ loc.status | titlecase }} ({{ loc.pressure }}%)
+              </span>
+            </div>
+          }
         }
       </div>
     </div>
@@ -108,19 +163,29 @@
       </div>
 
       <div class="action-triage-list">
-        @for (item of actionTriage(); track item.id) {
-          <div class="triage-item" [ngClass]="item.severity">
-            <div class="triage-icon">
-              {{ item.type === 'KYC' ? '🛡️' : item.type === 'REFUND' ? '↩️' : '📦' }}
-            </div>
-            <div class="triage-content">
-              <span class="triage-title">{{ item.title }}</span>
-              <span class="triage-meta">{{ item.meta }}</span>
-            </div>
-            <button class="admin-btn btn-sm" [ngClass]="item.severity === 'danger' ? 'btn-danger' : 'btn-secondary'" (click)="navigateTo(item.route)">
-              {{ item.type === 'KYC' ? 'Review' : item.type === 'REFUND' ? 'Authorize' : 'Inspect' }}
-            </button>
+        @if (actionTriage().length === 0) {
+          <div class="empty-state-hint">
+            <span>✓ No urgent operational blockers. System operating normally.</span>
           </div>
+        } @else {
+          @for (item of actionTriage(); track item.id) {
+            <div class="triage-item" [ngClass]="item.severity">
+              <div class="triage-icon">
+                {{ item.type === 'KYC' ? '🛡️' : item.type === 'REFUND' ? '↩️' : '📦' }}
+              </div>
+              <div class="triage-content">
+                <span class="triage-title">{{ item.title }}</span>
+                <span class="triage-meta">{{ item.meta }}</span>
+              </div>
+              <button 
+                type="button"
+                class="admin-btn btn-sm" 
+                [ngClass]="item.severity === 'danger' ? 'btn-danger' : 'btn-secondary'" 
+                (click)="navigateTo(item.route)">
+                {{ item.type === 'KYC' ? 'Review' : item.type === 'REFUND' ? 'Authorize' : 'Inspect' }}
+              </button>
+            </div>
+          }
         }
       </div>
     </div>
@@ -129,8 +194,8 @@
   <!-- Live Orders Inspection Table -->
   <div class="dashboard-card recent-orders-section">
     <div class="card-title-bar">
-      <h3>⚡ Real-Time Global Orders Stream</h3>
-      <button class="admin-btn btn-secondary btn-sm" (click)="navigateTo('/orders')">View All Orders →</button>
+      <h3>⚡ Real-Time Live Orders Stream ({{ activeCityScopeName() }})</h3>
+      <button type="button" class="admin-btn btn-secondary btn-sm" (click)="navigateTo('/orders')">View All Orders →</button>
     </div>
 
     <admin-data-table

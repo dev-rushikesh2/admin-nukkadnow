@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, of } from 'rxjs';
+import { Observable } from 'rxjs';
 import { AdminApiClient, ApiResponse, PaginatedResult } from '@nukkadnow/admin-api-client';
 import { OutletViewModel, OutletFilterCriteria } from '../models/outlets-view.model';
 
@@ -18,7 +18,19 @@ export class OutletsApi {
     return this.client.get<OutletViewModel>(`${this.endpoint}/${id}`);
   }
 
+  updateCapacity(id: string, hourlyCapacity: number, isThrottled: boolean, reasonCode?: string): Observable<ApiResponse<OutletViewModel>> {
+    return this.client.patch<OutletViewModel>(
+      `${this.endpoint}/${id}/capacity`,
+      { hourlyCapacity, isThrottled },
+      { reasonCode: reasonCode || 'CAPACITY_OVERRIDE' }
+    );
+  }
+
   updateStatus(id: string, status: string, reasonCode?: string): Observable<ApiResponse<OutletViewModel>> {
-    return this.client.patch<OutletViewModel>(`${this.endpoint}/${id}/status`, { status }, { reasonCode });
+    return this.client.patch<OutletViewModel>(
+      `${this.endpoint}/${id}/status`,
+      { status },
+      { reasonCode: reasonCode || 'OPERATIONAL_STATE_CHANGE' }
+    );
   }
 }

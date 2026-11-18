@@ -1,19 +1,338 @@
-<div class="notifications-page-container">
+<div class="notifications-container">
   <admin-page-header
-    title="Broadcasts & Notifications"
-    subtitle="Platform-wide announcements, emergency notices, SMS/WhatsApp delivery logs"
-    breadcrumb="Console / Broadcasts & Notifications">
-    <div actions>
-      <button class="admin-btn btn-secondary btn-sm" (click)="refresh()">↻ Refresh</button>
-      <button class="admin-btn btn-primary btn-sm" (click)="exportRecords()">Export CSV</button>
+    [title]="'Hyperlocal Broadcasts & Push Delivery — ' + activeCityName()"
+    subtitle="Direct omnichannel communication across WhatsApp, SMS, Push notifications, and In-App Banners."
+    breadcrumb="Console / Customer Helpdesk / Broadcasts & Notifications">
+    <div actions class="header-actions">
+      <button class="admin-btn btn-secondary btn-sm" (click)="fetchData()">
+        ↻ Refresh
+      </button>
+      <button class="admin-btn btn-outline btn-sm" (click)="exportRecords()">
+        📥 Export Audited CSV
+      </button>
+      <button class="admin-btn btn-primary btn-sm" (click)="openComposeModal()">
+        + Compose Targeted Broadcast
+      </button>
     </div>
   </admin-page-header>
 
-  <admin-data-table
-    [columns]="tableColumns"
-    [data]="store.items()"
-    [totalCount]="store.totalCount()"
-    [loading]="store.loading()"
-    (rowClick)="onRowClick($event)">
-  </admin-data-table>
+  <!-- KPI Metrics Cards -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Outbound Volume</div>
+      <div class="kpi-value">32,520</div>
+      <div class="kpi-sub">Delivered messages (30D)</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">WhatsApp Delivery Rate</div>
+      <div class="kpi-value text-accent">98.6%</div>
+      <div class="kpi-sub">Direct official Meta BSP</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Push Open / Click Rate</div>
+      <div class="kpi-value text-primary">42.8%</div>
+      <div class="kpi-sub">Realtime counter chimes</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Bounced / Undelivered</div>
+      <div class="kpi-value text-danger">681</div>
+      <div class="kpi-sub">&lt; 2.1% across all routes</div>
+    </div>
+  </div>
+
+  <!-- Geographic & Channel Filters Toolbar -->
+  <div class="filter-toolbar">
+    <!-- City Territory Scope Selector (Global Admins only) -->
+    @if (sessionService.isRoot() || sessionService.isSuperAdmin()) {
+      <div class="city-selector-group">
+        <label class="toolbar-label">Territory Scope:</label>
+        <div class="pill-buttons">
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="selectedCity === 'ALL'"
+            (click)="onCityFilterChange('ALL')">
+            🌐 All Cities
+          </button>
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="selectedCity === 'Nagpur'"
+            (click)="onCityFilterChange('Nagpur')">
+            📍 Nagpur
+          </button>
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="selectedCity === 'Akola'"
+            (click)="onCityFilterChange('Akola')">
+            📍 Akola
+          </button>
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="selectedCity === 'Amravati'"
+            (click)="onCityFilterChange('Amravati')">
+            📍 Amravati
+          </button>
+          <button
+            type="button"
+            class="filter-pill"
+            [class.active]="selectedCity === 'Pune'"
+            (click)="onCityFilterChange('Pune')">
+            📍 Pune
+          </button>
+        </div>
+      </div>
+    } @else if (sessionService.geoAssignment()) {
+      <div class="city-locked-badge">
+        <span class="icon">📍</span>
+        <span>Scoped to Municipal Jurisdiction: <strong>{{ sessionService.geoAssignment()?.cityName }}</strong></span>
+      </div>
+    }
+
+    <!-- Search Box -->
+    <div class="search-box">
+      <input
+        type="text"
+        class="admin-input search-input"
+        placeholder="Search campaigns by name or content..."
+        [(ngModel)]="searchQuery"
+        (keyup.enter)="applySearch()">
+      @if (searchQuery) {
+        <button class="clear-btn" (click)="clearSearch()">✕</button>
+      }
+      <button class="admin-btn btn-primary btn-sm" (click)="applySearch()">Search</button>
+    </div>
+  </div>
+
+  <!-- Channel & Status Sub-Filter Bar -->
+  <div class="subfilter-bar">
+    <div class="channel-pills">
+      <span class="toolbar-label">Channel:</span>
+      <button
+        type="button"
+        class="chan-pill"
+        [class.active]="selectedChannel === 'ALL'"
+        (click)="onChannelFilter('ALL')">
+        All Channels
+      </button>
+      <button
+        type="button"
+        class="chan-pill"
+        [class.active]="selectedChannel === 'WHATSAPP'"
+        (click)="onChannelFilter('WHATSAPP')">
+        💬 WhatsApp
+      </button>
+      <button
+        type="button"
+        class="chan-pill"
+        [class.active]="selectedChannel === 'SMS'"
+        (click)="onChannelFilter('SMS')">
+        📱 SMS
+      </button>
+      <button
+        type="button"
+        class="chan-pill"
+        [class.active]="selectedChannel === 'PUSH'"
+        (click)="onChannelFilter('PUSH')">
+        🔔 Push
+      </button>
+      <button
+        type="button"
+        class="chan-pill"
+        [class.active]="selectedChannel === 'IN_APP_BANNER'"
+        (click)="onChannelFilter('IN_APP_BANNER')">
+        📢 In-App Banner
+      </button>
+    </div>
+
+    <div class="status-tabs">
+      <button
+        type="button"
+        class="status-tab"
+        [class.active]="selectedStatus === 'ALL'"
+        (click)="onStatusFilter('ALL')">
+        All Statuses
+      </button>
+      <button
+        type="button"
+        class="status-tab"
+        [class.active]="selectedStatus === 'SENT'"
+        (click)="onStatusFilter('SENT')">
+        ✓ Dispatched
+      </button>
+      <button
+        type="button"
+        class="status-tab"
+        [class.active]="selectedStatus === 'SCHEDULED'"
+        (click)="onStatusFilter('SCHEDULED')">
+        ⏱ Scheduled
+      </button>
+      <button
+        type="button"
+        class="status-tab"
+        [class.active]="selectedStatus === 'FAILED'"
+        (click)="onStatusFilter('FAILED')">
+        ✕ Failed
+      </button>
+    </div>
+  </div>
+
+  <!-- Campaigns Data Table -->
+  <div class="table-card">
+    <admin-data-table
+      [columns]="tableColumns"
+      [data]="store.items()"
+      [totalCount]="store.totalCount()"
+      [loading]="store.loading()"
+      (rowClick)="onRowClick($event)">
+
+      <!-- Campaign Name & Author Template -->
+      <ng-template tableCell="name" let-item>
+        <div class="campaign-cell">
+          <span class="campaign-name">{{ item.name }}</span>
+          <span class="author-sub">By {{ item.sentByOperatorName }}</span>
+        </div>
+      </ng-template>
+
+      <!-- Channel Column Template -->
+      <ng-template tableCell="channel" let-item>
+        <div class="channel-cell">
+          <span class="chan-icon">{{ getChannelInfo(item.channel).icon }}</span>
+          <span class="badge" [ngClass]="'badge-' + getChannelInfo(item.channel).variant">
+            {{ getChannelInfo(item.channel).label }}
+          </span>
+        </div>
+      </ng-template>
+
+      <!-- Target Segment & Territory Column Template -->
+      <ng-template tableCell="targetAudience" let-item>
+        <div class="audience-cell">
+          <span class="aud-badge">{{ getAudienceText(item) }}</span>
+          <span class="aud-preview">"{{ item.messageTemplate | slice:0:60 }}..."</span>
+        </div>
+      </ng-template>
+
+      <!-- Volume & Deliverability Progress Bar Template -->
+      <ng-template tableCell="recipientCount" let-item>
+        <div class="volume-cell">
+          <div class="volume-header">
+            <strong>{{ item.recipientCount | number }}</strong> recipients
+            <span class="rate-text">{{ item.deliveryRatePercent }}%</span>
+          </div>
+          <div class="meter-bar">
+            <div class="meter-fill" [style.width.%]="item.deliveryRatePercent"></div>
+          </div>
+        </div>
+      </ng-template>
+
+      <!-- Status Column Template -->
+      <ng-template tableCell="status" let-item>
+        <admin-notifications-status-chip [status]="item.status"></admin-notifications-status-chip>
+      </ng-template>
+
+      <!-- Dispatched At Column Template -->
+      <ng-template tableCell="createdAt" let-item>
+        <div class="date-cell">
+          <span>{{ item.createdAt | date:'shortDate' }}</span>
+          <span class="time-text">{{ item.createdAt | date:'shortTime' }}</span>
+        </div>
+      </ng-template>
+
+    </admin-data-table>
+  </div>
+
+  <!-- Compose Broadcast Modal -->
+  @if (showComposeModal()) {
+    <div class="modal-backdrop" (click)="closeComposeModal()">
+      <div class="modal-dialog compose-dialog" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Compose Hyperlocal Notification Broadcast</h3>
+          <button class="close-x" (click)="closeComposeModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group flex-2">
+              <label class="form-label">Campaign Title:</label>
+              <input
+                type="text"
+                class="admin-input"
+                placeholder="e.g. Festival Evening Kirana Sale Alert"
+                [(ngModel)]="newCampaignName">
+            </div>
+            <div class="form-group flex-1">
+              <label class="form-label">Channel:</label>
+              <select class="admin-input" [(ngModel)]="newChannel">
+                <option value="WHATSAPP">💬 WhatsApp API</option>
+                <option value="SMS">📱 Transactional SMS</option>
+                <option value="PUSH">🔔 Push Notification</option>
+                <option value="IN_APP_BANNER">📢 In-App Banner</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label class="form-label">Target Audience Group:</label>
+              <select class="admin-input" [(ngModel)]="newTargetAudience">
+                <option value="CITY_MERCHANTS">Local Merchants (Selected City)</option>
+                <option value="CITY_CUSTOMERS">Local Consumers (Selected City)</option>
+                <option value="ALL_MERCHANTS">All Platform Merchants (Global)</option>
+                <option value="ALL_CUSTOMERS">All Platform Consumers (Global)</option>
+              </select>
+            </div>
+
+            <div class="form-group flex-1">
+              <label class="form-label">Territory Target:</label>
+              @if (sessionService.isRoot() || sessionService.isSuperAdmin()) {
+                <select class="admin-input" [(ngModel)]="newTargetCity">
+                  <option value="GLOBAL">🌐 Global (All Cities)</option>
+                  <option value="Nagpur">📍 Nagpur</option>
+                  <option value="Akola">📍 Akola</option>
+                  <option value="Amravati">📍 Amravati</option>
+                  <option value="Pune">📍 Pune</option>
+                </select>
+              } @else {
+                <input
+                  type="text"
+                  class="admin-input"
+                  [value]="sessionService.geoAssignment()?.cityName || 'Nagpur'"
+                  disabled>
+              }
+            </div>
+          </div>
+
+          <div class="form-group">
+            <div class="label-with-tags">
+              <label class="form-label">Broadcast Content / Template:</label>
+              <div class="tag-buttons">
+                <button type="button" class="tag-btn" (click)="insertTag('{merchant_name}')">+ Store Name</button>
+                <button type="button" class="tag-btn" (click)="insertTag('{customer_name}')">+ Customer</button>
+                <button type="button" class="tag-btn" (click)="insertTag('{order_id}')">+ Order ID</button>
+              </div>
+            </div>
+            <textarea
+              class="admin-input broadcast-textarea"
+              rows="4"
+              placeholder="Enter message template text. Insert dynamic tags as needed..."
+              [(ngModel)]="newMessageText">
+            </textarea>
+            <div class="char-count">
+              {{ newMessageText.length }} characters • Estimated Audience: ~2,400 active endpoints
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="admin-btn btn-secondary btn-sm" (click)="closeComposeModal()">Cancel</button>
+          <button
+            class="admin-btn btn-primary btn-sm"
+            [disabled]="!newCampaignName.trim() || !newMessageText.trim()"
+            (click)="sendBroadcast()">
+            🚀 Dispatch Immediate Broadcast
+          </button>
+        </div>
+      </div>
+    </div>
+  }
 </div>

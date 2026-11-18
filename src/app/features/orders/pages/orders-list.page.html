@@ -1,19 +1,64 @@
 <div class="orders-page-container">
   <admin-page-header
-    title="Live Orders Stream"
-    subtitle="Global real-time order stream, fulfillment monitoring and emergency override cancellations"
-    breadcrumb="Console / Live Orders Stream">
+    title="Live Orders Stream & Global Fulfillment"
+    [subtitle]="'Real-time order lifecycle tracking, pickup capacity slots, and safety interventions in ' + activeCityName()"
+    breadcrumb="Console / Orders">
     <div actions>
-      <button class="admin-btn btn-secondary btn-sm" (click)="refresh()">↻ Refresh</button>
-      <button class="admin-btn btn-primary btn-sm" (click)="exportRecords()">Export CSV</button>
+      <div class="stream-pill">
+        <span class="live-pulse"></span>
+        <span>Live Stream Active</span>
+      </div>
+      <button type="button" class="admin-btn btn-secondary btn-sm" (click)="loadOrders()">↻ Refresh</button>
     </div>
   </admin-page-header>
 
-  <admin-data-table
-    [columns]="tableColumns"
-    [data]="store.items()"
-    [totalCount]="store.totalCount()"
-    [loading]="store.loading()"
-    (rowClick)="onRowClick($event)">
-  </admin-data-table>
+  <!-- City Scope Filter Bar (for Root & Super Admin) -->
+  @if (sessionService.isRoot() || sessionService.isSuperAdmin()) {
+    <div class="city-selector-bar">
+      <span class="bar-lbl">Territory Filter:</span>
+      <div class="city-pills">
+        <button type="button" class="cpill" [class.active]="selectedCity === 'ALL'" (click)="onCityChange('ALL')">All Cities (Global Stream)</button>
+        <button type="button" class="cpill" [class.active]="selectedCity === 'Nagpur'" (click)="onCityChange('Nagpur')">📍 Nagpur</button>
+        <button type="button" class="cpill" [class.active]="selectedCity === 'Akola'" (click)="onCityChange('Akola')">📍 Akola</button>
+        <button type="button" class="cpill" [class.active]="selectedCity === 'Amravati'" (click)="onCityChange('Amravati')">📍 Amravati</button>
+        <button type="button" class="cpill" [class.active]="selectedCity === 'Pune'" (click)="onCityChange('Pune')">📍 Pune</button>
+      </div>
+    </div>
+  } @else if (sessionService.geoAssignment()) {
+    <div class="geo-locked-banner">
+      <span>📍 Orders strictly filtered to <strong>{{ sessionService.geoAssignment()?.cityName }} Municipal Territory</strong></span>
+    </div>
+  }
+
+  <!-- Search & Status Filter Toolbar -->
+  <div class="orders-filter-bar">
+    <div class="search-box">
+      <span>🔍</span>
+      <input
+        type="text"
+        class="admin-input"
+        placeholder="Search order ID, merchant, customer, or token..."
+        [(ngModel)]="searchQuery"
+        (ngModelChange)="loadOrders()">
+    </div>
+
+    <div class="status-tabs">
+      <button type="button" class="tab-btn" [class.active]="selectedStatus === ''" (click)="filterStatus('')">All Orders ({{ totalCount() }})</button>
+      <button type="button" class="tab-btn" [class.active]="selectedStatus === 'IN_PREPARATION'" (click)="filterStatus('IN_PREPARATION')">In Prep</button>
+      <button type="button" class="tab-btn" [class.active]="selectedStatus === 'READY_FOR_PICKUP'" (click)="filterStatus('READY_FOR_PICKUP')">Ready for Pickup</button>
+      <button type="button" class="tab-btn" [class.active]="selectedStatus === 'COMPLETED'" (click)="filterStatus('COMPLETED')">Completed</button>
+      <button type="button" class="tab-btn" [class.active]="selectedStatus === 'FORCE_CANCELLED'" (click)="filterStatus('FORCE_CANCELLED')">Cancelled / Intervened</button>
+    </div>
+  </div>
+
+  <!-- Table Card -->
+  <div class="table-card">
+    <admin-data-table
+      [columns]="tableColumns"
+      [data]="orders()"
+      [totalCount]="totalCount()"
+      [loading]="loading()"
+      (rowClick)="onRowClick($event)">
+    </admin-data-table>
+  </div>
 </div>

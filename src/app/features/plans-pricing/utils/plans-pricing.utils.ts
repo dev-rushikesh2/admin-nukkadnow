@@ -1,24 +1,13 @@
-import { PricingPlanViewModel } from '../models/plans-pricing-view.model';
-
 export function formatPricingPlanStatus(status: string): { label: string; variant: 'success' | 'warning' | 'danger' | 'info' | 'neutral' } {
   switch (status.toUpperCase()) {
     case 'ACTIVE':
     case 'VERIFIED':
-    case 'CONFIRMED':
-    case 'SUCCESS':
     case 'HEALTHY':
-      return { label: status, variant: 'success' };
-    case 'PENDING':
-    case 'REVIEW':
-    case 'PROCESSING':
-    case 'IN_PROGRESS':
-      return { label: status, variant: 'warning' };
+      return { label: 'Active Tier', variant: 'success' };
+    case 'ARCHIVED':
     case 'SUSPENDED':
-    case 'REJECTED':
-    case 'FAILED':
-    case 'CANCELLED':
-    case 'DEGRADED':
-      return { label: status, variant: 'danger' };
+    case 'INACTIVE':
+      return { label: 'Grandfathered / Archived', variant: 'neutral' };
     default:
       return { label: status, variant: 'neutral' };
   }

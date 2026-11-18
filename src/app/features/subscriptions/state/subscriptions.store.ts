@@ -1,4 +1,6 @@
-import { Injectable, signal, computed, inject } from '@angular/core';
+import { Injectable, signal, inject } from '@angular/core';
+import { Observable } from 'rxjs';
+import { tap } from 'rxjs/operators';
 import { SubscriptionsRepository } from '../data-access/subscriptions.repository';
 import { MerchantSubscriptionViewModel, MerchantSubscriptionFilterCriteria } from '../models/subscriptions-view.model';
 
@@ -31,7 +33,7 @@ export class SubscriptionsStore {
         this.loadingState.set(false);
       },
       error: (err) => {
-        this.errorState.set(err?.message || 'Failed to load records');
+        this.errorState.set(err?.message || 'Failed to load merchant subscriptions');
         this.loadingState.set(false);
       }
     });
@@ -45,9 +47,35 @@ export class SubscriptionsStore {
         this.loadingState.set(false);
       },
       error: (err) => {
-        this.errorState.set(err?.message || 'Failed to load record');
+        this.errorState.set(err?.message || 'Failed to load subscription details');
         this.loadingState.set(false);
       }
     });
+  }
+
+  extendGracePeriod(id: string, days: number, reasonCode?: string): Observable<MerchantSubscriptionViewModel> {
+    return this.repository.extendGracePeriod(id, days, reasonCode).pipe(
+      tap((updated) => {
+        this.itemsState.update((items) =>
+          items.map((sub) => (sub.id === id ? { ...sub, ...updated } : sub))
+        );
+        if (this.selectedItemState()?.id === id) {
+          this.selectedItemState.set(updated);
+        }
+      })
+    );
+  }
+
+  updateStatus(id: string, status: string, reasonCode?: string): Observable<MerchantSubscriptionViewModel> {
+    return this.repository.changeStatus(id, status, reasonCode).pipe(
+      tap((updated) => {
+        this.itemsState.update((items) =>
+          items.map((sub) => (sub.id === id ? { ...sub, ...updated } : sub))
+        );
+        if (this.selectedItemState()?.id === id) {
+          this.selectedItemState.set(updated);
+        }
+      })
+    );
   }
 }

@@ -1,4 +1,6 @@
-import { Injectable, signal, computed, inject } from '@angular/core';
+import { Injectable, signal, inject } from '@angular/core';
+import { Observable } from 'rxjs';
+import { tap } from 'rxjs/operators';
 import { LocalitiesRepository } from '../data-access/localities.repository';
 import { LocalityViewModel, LocalityFilterCriteria } from '../models/localities-view.model';
 
@@ -31,7 +33,7 @@ export class LocalitiesStore {
         this.loadingState.set(false);
       },
       error: (err) => {
-        this.errorState.set(err?.message || 'Failed to load records');
+        this.errorState.set(err?.message || 'Failed to load localities');
         this.loadingState.set(false);
       }
     });
@@ -45,9 +47,31 @@ export class LocalitiesStore {
         this.loadingState.set(false);
       },
       error: (err) => {
-        this.errorState.set(err?.message || 'Failed to load record');
+        this.errorState.set(err?.message || 'Failed to load locality details');
         this.loadingState.set(false);
       }
     });
+  }
+
+  createZone(payload: Partial<LocalityViewModel>): Observable<LocalityViewModel> {
+    return this.repository.createZone(payload).pipe(
+      tap((newZone) => {
+        this.itemsState.update((items) => [newZone, ...items]);
+        this.totalCountState.update((c) => c + 1);
+      })
+    );
+  }
+
+  updateStatus(id: string, status: string, reasonCode?: string, congestionMultiplier?: number): Observable<LocalityViewModel> {
+    return this.repository.changeStatus(id, status, reasonCode, congestionMultiplier).pipe(
+      tap((updated) => {
+        this.itemsState.update((items) =>
+          items.map((loc) => (loc.id === id ? { ...loc, ...updated } : loc))
+        );
+        if (this.selectedItemState()?.id === id) {
+          this.selectedItemState.set(updated);
+        }
+      })
+    );
   }
 }

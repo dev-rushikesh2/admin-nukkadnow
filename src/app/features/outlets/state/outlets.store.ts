@@ -1,4 +1,6 @@
-import { Injectable, signal, computed, inject } from '@angular/core';
+import { Injectable, signal, inject } from '@angular/core';
+import { Observable } from 'rxjs';
+import { tap } from 'rxjs/operators';
 import { OutletsRepository } from '../data-access/outlets.repository';
 import { OutletViewModel, OutletFilterCriteria } from '../models/outlets-view.model';
 
@@ -31,7 +33,7 @@ export class OutletsStore {
         this.loadingState.set(false);
       },
       error: (err) => {
-        this.errorState.set(err?.message || 'Failed to load records');
+        this.errorState.set(err?.message || 'Failed to load outlets');
         this.loadingState.set(false);
       }
     });
@@ -45,9 +47,35 @@ export class OutletsStore {
         this.loadingState.set(false);
       },
       error: (err) => {
-        this.errorState.set(err?.message || 'Failed to load record');
+        this.errorState.set(err?.message || 'Failed to load outlet details');
         this.loadingState.set(false);
       }
     });
+  }
+
+  overrideCapacity(id: string, hourlyCapacity: number, isThrottled: boolean, reasonCode?: string): Observable<OutletViewModel> {
+    return this.repository.updateCapacity(id, hourlyCapacity, isThrottled, reasonCode).pipe(
+      tap((updated) => {
+        this.itemsState.update((items) =>
+          items.map((outlet) => (outlet.id === id ? { ...outlet, ...updated } : outlet))
+        );
+        if (this.selectedItemState()?.id === id) {
+          this.selectedItemState.set(updated);
+        }
+      })
+    );
+  }
+
+  updateStatus(id: string, status: string, reasonCode?: string): Observable<OutletViewModel> {
+    return this.repository.changeStatus(id, status, reasonCode).pipe(
+      tap((updated) => {
+        this.itemsState.update((items) =>
+          items.map((outlet) => (outlet.id === id ? { ...outlet, ...updated } : outlet))
+        );
+        if (this.selectedItemState()?.id === id) {
+          this.selectedItemState.set(updated);
+        }
+      })
+    );
   }
 }

@@ -165,4 +165,8 @@ export class CatalogueModerationStore {
       },
     });
   }
+
+  takeDownItem(id: string, status: string, reasonCode?: string) {
+    return this.repository.changeStatus(id, status, reasonCode);
+  }
 }

@@ -1,4 +1,6 @@
-import { Injectable, signal, computed, inject } from '@angular/core';
+import { Injectable, signal, inject } from '@angular/core';
+import { Observable } from 'rxjs';
+import { tap } from 'rxjs/operators';
 import { CategoriesRepository } from '../data-access/categories.repository';
 import { CategoryViewModel, CategoryFilterCriteria } from '../models/categories-view.model';
 
@@ -31,7 +33,7 @@ export class CategoriesStore {
         this.loadingState.set(false);
       },
       error: (err) => {
-        this.errorState.set(err?.message || 'Failed to load records');
+        this.errorState.set(err?.message || 'Failed to load categories');
         this.loadingState.set(false);
       }
     });
@@ -45,9 +47,44 @@ export class CategoriesStore {
         this.loadingState.set(false);
       },
       error: (err) => {
-        this.errorState.set(err?.message || 'Failed to load record');
+        this.errorState.set(err?.message || 'Failed to load category details');
         this.loadingState.set(false);
       }
     });
+  }
+
+  createCategory(payload: Partial<CategoryViewModel>): Observable<CategoryViewModel> {
+    return this.repository.createCategory(payload).pipe(
+      tap((newCategory) => {
+        this.itemsState.update((items) => [newCategory, ...items]);
+        this.totalCountState.update((c) => c + 1);
+      })
+    );
+  }
+
+  updateCommission(id: string, commissionPct: number, gstSlabPct: number, reasonCode?: string): Observable<CategoryViewModel> {
+    return this.repository.updateCommission(id, commissionPct, gstSlabPct, reasonCode).pipe(
+      tap((updated) => {
+        this.itemsState.update((items) =>
+          items.map((cat) => (cat.id === id ? { ...cat, ...updated } : cat))
+        );
+        if (this.selectedItemState()?.id === id) {
+          this.selectedItemState.set(updated);
+        }
+      })
+    );
+  }
+
+  updateStatus(id: string, status: string, reasonCode?: string): Observable<CategoryViewModel> {
+    return this.repository.changeStatus(id, status, reasonCode).pipe(
+      tap((updated) => {
+        this.itemsState.update((items) =>
+          items.map((cat) => (cat.id === id ? { ...cat, ...updated } : cat))
+        );
+        if (this.selectedItemState()?.id === id) {
+          this.selectedItemState.set(updated);
+        }
+      })
+    );
   }
 }

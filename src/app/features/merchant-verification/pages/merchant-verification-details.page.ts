@@ -76,7 +76,7 @@ import { AuditReasonDialogService } from '../../../core/audit-context/audit-reas
                     <div class="cert-title">{{ doc.title.toUpperCase() }}</div>
                     <div class="cert-body">
                       <div>Issued to: {{ kyc.legalEntityName }}</div>
-                      <div>Locality: {{ kyc.locality }}, Nagpur</div>
+                      <div>Locality: {{ kyc.locality }} (Maharashtra)</div>
                       <div>Doc Ref: {{ doc.documentNumber || 'PROOF-FILE-VERIFIED' }}</div>
                       <div class="cert-stamp">✓ DIGITAL SIGNATURE VERIFIED</div>
                     </div>

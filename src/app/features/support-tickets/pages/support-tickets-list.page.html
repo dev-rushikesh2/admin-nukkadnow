@@ -1,19 +1,90 @@
 <div class="support-tickets-page-container">
   <admin-page-header
-    title="Support & Helpdesk Tickets"
-    subtitle="Customer and merchant support cases, SLA breach monitoring and ticket assignment"
-    breadcrumb="Console / Support & Helpdesk Tickets">
+    [title]="'Support Helpdesk & SLA Tickets — ' + (sessionService.geoAssignment()?.cityName || (selectedCity() === 'ALL' ? 'Global Command' : selectedCity()))"
+    subtitle="Frontline resolution desk for customer disputes, merchant support requests, and order exceptions"
+    breadcrumb="Console / Customer Support Helpdesk">
     <div actions>
-      <button class="admin-btn btn-secondary btn-sm" (click)="refresh()">↻ Refresh</button>
-      <button class="admin-btn btn-primary btn-sm" (click)="exportRecords()">Export CSV</button>
+      <button type="button" class="admin-btn btn-secondary btn-sm" (click)="refresh()">↻ Refresh</button>
+      <button type="button" class="admin-btn btn-primary btn-sm" (click)="exportCsv()">Export CSV</button>
     </div>
   </admin-page-header>
 
-  <admin-data-table
-    [columns]="tableColumns"
-    [data]="store.items()"
-    [totalCount]="store.totalCount()"
-    [loading]="store.loading()"
-    (rowClick)="onRowClick($event)">
-  </admin-data-table>
+  <!-- City Scope Selection -->
+  @if (sessionService.isRoot() || sessionService.isSuperAdmin()) {
+    <div class="territory-filter-bar">
+      <span class="bar-lbl">Territory Filter:</span>
+      <div class="city-pills">
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'ALL'" (click)="onCityChange('ALL')">All Cities (Global)</button>
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'Nagpur'" (click)="onCityChange('Nagpur')">📍 Nagpur</button>
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'Akola'" (click)="onCityChange('Akola')">📍 Akola</button>
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'Amravati'" (click)="onCityChange('Amravati')">📍 Amravati</button>
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'Pune'" (click)="onCityChange('Pune')">📍 Pune</button>
+      </div>
+    </div>
+  } @else if (sessionService.geoAssignment()) {
+    <div class="geo-locked-banner">
+      <span>📍 Frontline support tickets scoped strictly to <strong>{{ sessionService.geoAssignment()?.cityName }} Municipal Territory</strong></span>
+    </div>
+  }
+
+  <!-- Summary Metric Chips -->
+  <div class="support-metrics-row">
+    <div class="smetric-chip blue">
+      <span class="smetric-val">{{ openCount() }}</span>
+      <span class="smetric-lbl">Open Incidents</span>
+    </div>
+    <div class="smetric-chip" [class.red]="p1UrgentCount() > 0" [class.amber]="p1UrgentCount() === 0">
+      <span class="smetric-val">{{ p1UrgentCount() }}</span>
+      <span class="smetric-lbl">Urgent P1 Escalations</span>
+    </div>
+    <div class="smetric-chip" [class.red]="slaBreachedCount() > 0" [class.green]="slaBreachedCount() === 0">
+      <span class="smetric-val">{{ slaBreachedCount() }}</span>
+      <span class="smetric-lbl">SLA Breached / At Risk</span>
+    </div>
+    <div class="smetric-chip purple">
+      <span class="smetric-val">14 mins</span>
+      <span class="smetric-lbl">Average Resolution SLA</span>
+    </div>
+  </div>
+
+  <!-- Operational Filter Toolbar -->
+  <div class="filter-toolbar">
+    <div class="status-tabs">
+      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'ALL'" (click)="onStatusChange('ALL')">
+        All Tickets ({{ store.items().length }})
+      </button>
+      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'OPEN'" (click)="onStatusChange('OPEN')">
+        Open
+      </button>
+      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'INVESTIGATING'" (click)="onStatusChange('INVESTIGATING')">
+        Investigating
+      </button>
+      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'ESCALATED'" (click)="onStatusChange('ESCALATED')">
+        Escalated
+      </button>
+      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'RESOLVED'" (click)="onStatusChange('RESOLVED')">
+        Resolved
+      </button>
+    </div>
+
+    <div class="search-box">
+      <input
+        type="search"
+        placeholder="Filter by ticket #, customer, order ID, phone..."
+        [value]="searchQuery()"
+        (input)="onSearchChange($event)"
+        class="search-input" />
+    </div>
+  </div>
+
+  <!-- Data Table -->
+  <div class="table-container">
+    <admin-data-table
+      [columns]="tableColumns"
+      [data]="filteredTickets()"
+      [totalCount]="filteredTickets().length"
+      [loading]="store.loading()"
+      (rowClick)="onRowClick($event)">
+    </admin-data-table>
+  </div>
 </div>

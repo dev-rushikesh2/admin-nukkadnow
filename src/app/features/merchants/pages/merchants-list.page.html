@@ -1,13 +1,39 @@
 <div class="merchants-page-container">
   <admin-page-header
     title="Merchant Master Registry"
-    subtitle="Registered seller businesses across Nagpur localities and seller categories"
+    [subtitle]="'Registered seller businesses operating across ' + activeCityName() + ' localities and retail categories'"
     breadcrumb="Console / Merchants">
     <div actions>
-      <button class="admin-btn btn-secondary btn-sm" (click)="loadMerchants()">↻ Refresh</button>
-      <button class="admin-btn btn-primary btn-sm" (click)="loadMerchants()">Export CSV</button>
+      <button type="button" class="admin-btn btn-secondary btn-sm" (click)="loadMerchants()">↻ Refresh</button>
+      <button type="button" class="admin-btn btn-primary btn-sm" (click)="exportCsv()">Export CSV</button>
     </div>
   </admin-page-header>
+
+  <!-- City Scope Filter Bar (for Root & Super Admin) -->
+  @if (sessionService.isRoot() || sessionService.isSuperAdmin()) {
+    <div class="city-selector-bar">
+      <span class="bar-lbl">Territory Filter:</span>
+      <div class="city-pills">
+        <button type="button" class="cpill" [class.active]="selectedCity === 'ALL'" (click)="onCityChange('ALL')">All Cities (Global)</button>
+        <button type="button" class="cpill" [class.active]="selectedCity === 'Nagpur'" (click)="onCityChange('Nagpur')">📍 Nagpur</button>
+        <button type="button" class="cpill" [class.active]="selectedCity === 'Akola'" (click)="onCityChange('Akola')">📍 Akola</button>
+        <button type="button" class="cpill" [class.active]="selectedCity === 'Amravati'" (click)="onCityChange('Amravati')">📍 Amravati</button>
+        <button type="button" class="cpill" [class.active]="selectedCity === 'Pune'" (click)="onCityChange('Pune')">📍 Pune</button>
+      </div>
+    </div>
+  } @else if (sessionService.geoAssignment()) {
+    <div class="geo-locked-banner">
+      <span>📍 Managing merchant stores strictly within <strong>{{ sessionService.geoAssignment()?.cityName }} Municipal Territory</strong></span>
+    </div>
+  }
+
+  <!-- Status Quick-Filter Tabs -->
+  <div class="status-tabs-row">
+    <button type="button" class="status-tab" [class.active]="selectedStatus === ''" (click)="setStatusTab('')">All Stores ({{ totalCount() }})</button>
+    <button type="button" class="status-tab" [class.active]="selectedStatus === 'ACTIVE'" (click)="setStatusTab('ACTIVE')">✓ Active Stores</button>
+    <button type="button" class="status-tab" [class.active]="selectedStatus === 'PENDING_VERIFICATION'" (click)="setStatusTab('PENDING_VERIFICATION')">⏳ Pending Verification</button>
+    <button type="button" class="status-tab" [class.active]="selectedStatus === 'SUSPENDED'" (click)="setStatusTab('SUSPENDED')">🚫 Suspended</button>
+  </div>
 
   <!-- Filter & Search Toolbar -->
   <div class="filter-toolbar">
@@ -16,20 +42,17 @@
       <input
         type="text"
         class="admin-input"
-        placeholder="Search merchant name, ID, or locality..."
+        placeholder="Search merchant name, legal entity, or locality..."
         [(ngModel)]="searchQuery"
         (ngModelChange)="onFilterChange()">
     </div>
 
     <div class="filter-controls">
       <select class="admin-select" [(ngModel)]="selectedLocality" (change)="onFilterChange()">
-        <option value="">All Nagpur Localities</option>
-        <option value="Dharampeth">Dharampeth</option>
-        <option value="Sadar">Sadar</option>
-        <option value="Ramdaspeth">Ramdaspeth</option>
-        <option value="Sitabuldi">Sitabuldi</option>
-        <option value="Wardha Road">Wardha Road</option>
-        <option value="Mahal">Mahal</option>
+        <option value="">All {{ activeCityName() }} Localities</option>
+        @for (loc of availableLocalities(); track loc) {
+          <option [value]="loc">{{ loc }}</option>
+        }
       </select>
 
       <select class="admin-select" [(ngModel)]="selectedMode" (change)="onFilterChange()">
@@ -41,14 +64,7 @@
         <option value="SEASONAL">Seasonal Pop-up</option>
       </select>
 
-      <select class="admin-select" [(ngModel)]="selectedStatus" (change)="onFilterChange()">
-        <option value="">All Lifecycle States</option>
-        <option value="ACTIVE">Active</option>
-        <option value="PENDING_VERIFICATION">Pending Verification</option>
-        <option value="SUSPENDED">Suspended</option>
-      </select>
-
-      <button class="admin-btn btn-secondary btn-sm" (click)="resetFilters()">Clear</button>
+      <button type="button" class="admin-btn btn-secondary btn-sm" (click)="resetFilters()">Clear Filters</button>
     </div>
   </div>
 

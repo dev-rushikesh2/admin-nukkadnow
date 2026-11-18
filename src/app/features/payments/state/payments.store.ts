@@ -1,4 +1,6 @@
-import { Injectable, signal, computed, inject } from '@angular/core';
+import { Injectable, signal, inject } from '@angular/core';
+import { Observable } from 'rxjs';
+import { tap } from 'rxjs/operators';
 import { PaymentsRepository } from '../data-access/payments.repository';
 import { PaymentTransactionViewModel, PaymentTransactionFilterCriteria } from '../models/payments-view.model';
 
@@ -31,7 +33,7 @@ export class PaymentsStore {
         this.loadingState.set(false);
       },
       error: (err) => {
-        this.errorState.set(err?.message || 'Failed to load records');
+        this.errorState.set(err?.message || 'Failed to load payments ledger');
         this.loadingState.set(false);
       }
     });
@@ -45,9 +47,35 @@ export class PaymentsStore {
         this.loadingState.set(false);
       },
       error: (err) => {
-        this.errorState.set(err?.message || 'Failed to load record');
+        this.errorState.set(err?.message || 'Failed to load transaction details');
         this.loadingState.set(false);
       }
     });
+  }
+
+  replayWebhook(id: string): Observable<{ replayed: boolean; deliveryTimestamp: string }> {
+    return this.repository.replayWebhook(id).pipe(
+      tap(() => {
+        this.itemsState.update((items) =>
+          items.map((txn) => (txn.id === id ? { ...txn, webhookDelivered: true } : txn))
+        );
+        if (this.selectedItemState()?.id === id) {
+          this.selectedItemState.update((curr) => curr ? { ...curr, webhookDelivered: true } : null);
+        }
+      })
+    );
+  }
+
+  releaseEscrow(id: string, reasonCode?: string): Observable<PaymentTransactionViewModel> {
+    return this.repository.releaseEscrow(id, reasonCode).pipe(
+      tap((updated) => {
+        this.itemsState.update((items) =>
+          items.map((txn) => (txn.id === id ? { ...txn, ...updated } : txn))
+        );
+        if (this.selectedItemState()?.id === id) {
+          this.selectedItemState.set(updated);
+        }
+      })
+    );
   }
 }

@@ -1,19 +1,168 @@
 <div class="plans-pricing-page-container">
   <admin-page-header
-    title="Plans & Pricing Slabs"
-    subtitle="SaaS tier definitions, transaction fee matrices, and pilot locality introductory offers"
-    breadcrumb="Console / Plans & Pricing Slabs">
+    title="SaaS Plans & Pricing Architecture"
+    subtitle="Configure merchant software subscription tiers, catalog entitlements, and take-rate discounts"
+    breadcrumb="Console / Financials & Pricing Architecture">
     <div actions>
-      <button class="admin-btn btn-secondary btn-sm" (click)="refresh()">↻ Refresh</button>
-      <button class="admin-btn btn-primary btn-sm" (click)="exportRecords()">Export CSV</button>
+      <button type="button" class="admin-btn btn-secondary btn-sm" (click)="refresh()">↻ Refresh</button>
+      <button type="button" class="admin-btn btn-primary btn-sm" (click)="openAddModal()">+ Create Plan Tier</button>
     </div>
   </admin-page-header>
 
-  <admin-data-table
-    [columns]="tableColumns"
-    [data]="store.items()"
-    [totalCount]="store.totalCount()"
-    [loading]="store.loading()"
-    (rowClick)="onRowClick($event)">
-  </admin-data-table>
+  <!-- Plans Grid Cards -->
+  <div class="plans-grid">
+    @for (plan of plans(); track plan.id) {
+      <div class="plan-card" [class.popular]="plan.isPopular" (click)="onPlanClick(plan)">
+        @if (plan.isPopular) {
+          <div class="popular-ribbon">Most Popular Choice</div>
+        }
+
+        <div class="card-top">
+          <div class="title-row">
+            <h3 class="plan-title">{{ plan.title }}</h3>
+            <admin-plans-pricing-status-chip [status]="plan.status"></admin-plans-pricing-status-chip>
+          </div>
+
+          <div class="price-block">
+            <span class="currency">₹</span>
+            <span class="amount">{{ plan.monthlyPricePaise === 0 ? '0' : (plan.monthlyPricePaise / 100) }}</span>
+            <span class="period">/ month</span>
+          </div>
+          <span class="annual-sub">or {{ plan.annualPriceFormatted }}/year (billed annually)</span>
+        </div>
+
+        <div class="specs-list">
+          <div class="spec-row">
+            <span class="spec-lbl">🏪 Max Outlets</span>
+            <span class="spec-val font-semibold">{{ plan.maxOutlets === 999 ? 'Unlimited' : plan.maxOutlets + ' Storefront(s)' }}</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-lbl">📦 Catalog Products</span>
+            <span class="spec-val font-semibold">{{ plan.maxCatalogSkus === 99999 ? 'Unlimited' : plan.maxCatalogSkus + ' SKUs' }}</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-lbl">📉 Commission Discount</span>
+            <span class="spec-val font-semibold text-green">{{ (plan.commissionDiscountBps / 100).toFixed(1) }}% OFF Take-Rate</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-lbl">⚡ Priority Dispatch</span>
+            <span class="spec-val">{{ plan.prioritySupport ? 'Included' : 'Standard' }}</span>
+          </div>
+        </div>
+
+        <div class="entitlements-box">
+          <span class="entitlements-lbl">Included Entitlements</span>
+          <ul class="checklist">
+            @for (ent of plan.entitlements; track ent) {
+              <li><span class="checkmark">✓</span> {{ ent }}</li>
+            }
+          </ul>
+        </div>
+
+        <div class="card-action">
+          <button type="button" class="admin-btn btn-secondary btn-block">Inspect & Tune Tier →</button>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Create Plan Modal -->
+  @if (isAddModalOpen()) {
+    <div class="modal-backdrop" (click)="closeAddModal()">
+      <div class="modal-panel" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div>
+            <h3>Create SaaS Pricing Tier</h3>
+            <p>Define fee structure and software limits for merchant apps</p>
+          </div>
+          <button type="button" class="close-btn" (click)="closeAddModal()">✕</button>
+        </div>
+
+        <form (ngSubmit)="submitNewPlan()" class="modal-body">
+          <div class="form-group">
+            <label>Tier Display Title *</label>
+            <input
+              type="text"
+              name="title"
+              [(ngModel)]="newPlan.title"
+              placeholder="e.g. Hyperlocal Growth Pro"
+              required
+              class="form-control" />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Monthly Price (₹) *</label>
+              <input
+                type="number"
+                name="price"
+                [(ngModel)]="newPlan.monthlyPriceRupees"
+                min="0"
+                step="50"
+                class="form-control font-semibold" />
+            </div>
+
+            <div class="form-group">
+              <label>Take-Rate Discount (bps)</label>
+              <input
+                type="number"
+                name="discount"
+                [(ngModel)]="newPlan.commissionDiscountBps"
+                min="0"
+                max="500"
+                step="25"
+                placeholder="50 = 0.5% off"
+                class="form-control" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Max Storefront Outlets</label>
+              <input
+                type="number"
+                name="outlets"
+                [(ngModel)]="newPlan.maxOutlets"
+                min="1"
+                max="50"
+                class="form-control" />
+            </div>
+
+            <div class="form-group">
+              <label>Max Catalog Products</label>
+              <input
+                type="number"
+                name="skus"
+                [(ngModel)]="newPlan.maxCatalogSkus"
+                min="50"
+                max="10000"
+                step="100"
+                class="form-control" />
+            </div>
+          </div>
+
+          <div class="checkbox-row">
+            <label class="cb-label">
+              <input type="checkbox" name="popular" [(ngModel)]="newPlan.isPopular" />
+              <span>Mark as "Most Popular" Tier</span>
+            </label>
+            <label class="cb-label">
+              <input type="checkbox" name="support" [(ngModel)]="newPlan.prioritySupport" />
+              <span>Dedicated Account Manager & Priority Support</span>
+            </label>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="admin-btn btn-secondary" (click)="closeAddModal()">Cancel</button>
+            <button
+              type="submit"
+              class="admin-btn btn-primary"
+              [disabled]="isSubmitting() || !newPlan.title">
+              @if (isSubmitting()) { Creating... } @else { Save Plan Tier }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
 </div>

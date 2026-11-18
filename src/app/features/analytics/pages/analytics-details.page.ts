@@ -4,18 +4,19 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AnalyticsStore } from '../state/analytics.store';
 import { PageHeaderComponent } from '@nukkadnow/admin-ui';
 import { AnalyticsStatusChipComponent } from '../components/analytics-status-chip.component';
+import { InrCurrencyPipe } from '../../../shared/pipes/inr-currency.pipe';
 
 @Component({
   selector: 'admin-analytics-details-page',
   standalone: true,
-  imports: [CommonModule, PageHeaderComponent, AnalyticsStatusChipComponent],
+  imports: [CommonModule, PageHeaderComponent, AnalyticsStatusChipComponent, InrCurrencyPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="details-page-container">
       <admin-page-header
-        [title]="'Details: ' + (store.selectedItem()?.name || id)"
-        subtitle="Immutable inspection & operational management"
-        breadcrumb="Console / Analytics & Heatmaps / Inspection">
+        [title]="'Analytics Ledger: ' + (store.selectedItem()?.name || id)"
+        subtitle="Audited financial snapshots and settlement breakdown"
+        breadcrumb="Console / Governance / Business Analytics / Inspection">
         <div actions>
           <button class="admin-btn btn-secondary btn-sm" (click)="goBack()">← Back</button>
         </div>
@@ -24,10 +25,14 @@ import { AnalyticsStatusChipComponent } from '../components/analytics-status-chi
       @if (store.selectedItem(); as item) {
         <div class="details-grid">
           <div class="details-card">
-            <h3>Record Metadata</h3>
-            <p><strong>ID:</strong> <span class="font-mono">{{ item.id }}</span></p>
-            <p><strong>Status:</strong> <admin-analytics-status-chip [status]="item.status"></admin-analytics-status-chip></p>
-            <p><strong>Timestamp:</strong> {{ item.createdAt | date:'medium' }}</p>
+            <h3>Financial Summary</h3>
+            <p><strong>Reporting Scope:</strong> 📍 {{ item.city }} ({{ item.range }})</p>
+            <p><strong>Gross GMV:</strong> <span class="font-bold text-accent">{{ item.todayGmvPaise | inrCurrency }}</span></p>
+            <p><strong>Commission Earned:</strong> {{ item.commissionEarnedPaise | inrCurrency }}</p>
+            <p><strong>Merchant Payouts:</strong> {{ item.merchantPayoutsPaise | inrCurrency }}</p>
+            <p><strong>Total Orders:</strong> {{ item.totalOrders }}</p>
+            <p><strong>Average Order Value:</strong> {{ item.averageOrderValuePaise | inrCurrency }}</p>
+            <p><strong>Recorded At:</strong> {{ item.createdAt | date:'medium' }}</p>
           </div>
         </div>
       }
@@ -41,6 +46,13 @@ import { AnalyticsStatusChipComponent } from '../components/analytics-status-chi
       border: 1px solid var(--admin-border-subtle);
       border-radius: var(--admin-radius-md);
       padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+
+      h3 { margin: 0 0 8px 0; color: var(--admin-text-primary); }
+      p { margin: 0; color: var(--admin-text-secondary); font-size: 0.875rem; }
+      .font-bold { font-weight: 700; }
     }
   `]
 })

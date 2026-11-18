@@ -8,33 +8,38 @@ import { PlatformAnalyticsViewModel, PlatformAnalyticsFilterCriteria } from '../
 export class AnalyticsStore {
   private readonly repository = inject(AnalyticsRepository);
 
+  private readonly metricsState = signal<PlatformAnalyticsViewModel | null>(null);
   private readonly itemsState = signal<PlatformAnalyticsViewModel[]>([]);
   private readonly selectedItemState = signal<PlatformAnalyticsViewModel | null>(null);
   private readonly totalCountState = signal<number>(0);
   private readonly loadingState = signal<boolean>(false);
   private readonly errorState = signal<string | null>(null);
 
+  readonly metrics = this.metricsState.asReadonly();
   readonly items = this.itemsState.asReadonly();
   readonly selectedItem = this.selectedItemState.asReadonly();
   readonly totalCount = this.totalCountState.asReadonly();
   readonly loading = this.loadingState.asReadonly();
   readonly error = this.errorState.asReadonly();
 
-  loadItems(filters?: PlatformAnalyticsFilterCriteria): void {
+  loadMetrics(filters?: PlatformAnalyticsFilterCriteria): void {
     this.loadingState.set(true);
     this.errorState.set(null);
 
-    this.repository.fetchItems(filters).subscribe({
-      next: (res) => {
-        this.itemsState.set(res.items);
-        this.totalCountState.set(res.total);
+    this.repository.fetchMetrics(filters).subscribe({
+      next: (data) => {
+        this.metricsState.set(data);
         this.loadingState.set(false);
       },
       error: (err) => {
-        this.errorState.set(err?.message || 'Failed to load records');
+        this.errorState.set(err?.message || 'Failed to load platform analytics');
         this.loadingState.set(false);
       }
     });
+  }
+
+  loadItems(filters?: PlatformAnalyticsFilterCriteria): void {
+    this.loadMetrics(filters);
   }
 
   loadById(id: string): void {

@@ -1,24 +1,19 @@
-import { SupportTicketViewModel } from '../models/support-tickets-view.model';
-
 export function formatSupportTicketStatus(status: string): { label: string; variant: 'success' | 'warning' | 'danger' | 'info' | 'neutral' } {
   switch (status.toUpperCase()) {
-    case 'ACTIVE':
-    case 'VERIFIED':
-    case 'CONFIRMED':
+    case 'RESOLVED':
+    case 'CLOSED':
     case 'SUCCESS':
-    case 'HEALTHY':
-      return { label: status, variant: 'success' };
+      return { label: status === 'CLOSED' ? 'Ticket Closed' : 'Issue Resolved', variant: 'success' };
+    case 'OPEN':
     case 'PENDING':
-    case 'REVIEW':
-    case 'PROCESSING':
+      return { label: 'Open (Needs Response)', variant: 'warning' };
+    case 'INVESTIGATING':
     case 'IN_PROGRESS':
-      return { label: status, variant: 'warning' };
-    case 'SUSPENDED':
-    case 'REJECTED':
-    case 'FAILED':
-    case 'CANCELLED':
-    case 'DEGRADED':
-      return { label: status, variant: 'danger' };
+      return { label: 'Under Investigation', variant: 'info' };
+    case 'ESCALATED':
+    case 'CRITICAL':
+    case 'URGENT':
+      return { label: 'Escalated to Ops', variant: 'danger' };
     default:
       return { label: status, variant: 'neutral' };
   }

@@ -1,19 +1,90 @@
 <div class="subscriptions-page-container">
   <admin-page-header
-    title="Merchant SaaS Subscriptions"
-    subtitle="Merchant subscription lifecycles, billing schedules, and manual exception waivers"
-    breadcrumb="Console / Merchant SaaS Subscriptions">
+    [title]="'Merchant SaaS Subscriptions — ' + (sessionService.geoAssignment()?.cityName || (selectedCity() === 'ALL' ? 'Global Grid' : selectedCity()))"
+    subtitle="Manage merchant software tier entitlements, recurring billing cycles, and invoice grace periods"
+    breadcrumb="Console / Financials & Subscriptions">
     <div actions>
-      <button class="admin-btn btn-secondary btn-sm" (click)="refresh()">↻ Refresh</button>
-      <button class="admin-btn btn-primary btn-sm" (click)="exportRecords()">Export CSV</button>
+      <button type="button" class="admin-btn btn-secondary btn-sm" (click)="refresh()">↻ Refresh</button>
+      <button type="button" class="admin-btn btn-primary btn-sm" (click)="exportCsv()">Export CSV</button>
     </div>
   </admin-page-header>
 
-  <admin-data-table
-    [columns]="tableColumns"
-    [data]="store.items()"
-    [totalCount]="store.totalCount()"
-    [loading]="store.loading()"
-    (rowClick)="onRowClick($event)">
-  </admin-data-table>
+  <!-- City Scope Selection -->
+  @if (sessionService.isRoot() || sessionService.isSuperAdmin()) {
+    <div class="territory-filter-bar">
+      <span class="bar-lbl">Territory Filter:</span>
+      <div class="city-pills">
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'ALL'" (click)="onCityChange('ALL')">All Cities (Global)</button>
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'Nagpur'" (click)="onCityChange('Nagpur')">📍 Nagpur</button>
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'Akola'" (click)="onCityChange('Akola')">📍 Akola</button>
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'Amravati'" (click)="onCityChange('Amravati')">📍 Amravati</button>
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'Pune'" (click)="onCityChange('Pune')">📍 Pune</button>
+      </div>
+    </div>
+  } @else if (sessionService.geoAssignment()) {
+    <div class="geo-locked-banner">
+      <span>📍 Merchant SaaS subscriptions scoped strictly to <strong>{{ sessionService.geoAssignment()?.cityName }} Municipal Territory</strong></span>
+    </div>
+  }
+
+  <!-- Summary Metric Chips -->
+  <div class="subscriptions-metrics-row">
+    <div class="smetric-chip green">
+      <span class="smetric-val">{{ mrrFormatted() }}</span>
+      <span class="smetric-lbl">Monthly Recurring Revenue (MRR)</span>
+    </div>
+    <div class="smetric-chip blue">
+      <span class="smetric-val">{{ activeStoresCount() }}</span>
+      <span class="smetric-lbl">Subscribed Merchants</span>
+    </div>
+    <div class="smetric-chip" [class.amber]="pastDueCount() > 0" [class.purple]="pastDueCount() === 0">
+      <span class="smetric-val">{{ pastDueCount() }}</span>
+      <span class="smetric-lbl">Past Due (In Grace Period)</span>
+    </div>
+    <div class="smetric-chip purple">
+      <span class="smetric-val">100%</span>
+      <span class="smetric-lbl">Collection Efficiency</span>
+    </div>
+  </div>
+
+  <!-- Operational Filter Toolbar -->
+  <div class="filter-toolbar">
+    <div class="status-tabs">
+      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'ALL'" (click)="onStatusChange('ALL')">
+        All Plans ({{ store.items().length }})
+      </button>
+      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'ACTIVE'" (click)="onStatusChange('ACTIVE')">
+        Active
+      </button>
+      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'TRIAL'" (click)="onStatusChange('TRIAL')">
+        Trial
+      </button>
+      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'PAST_DUE'" (click)="onStatusChange('PAST_DUE')">
+        Past Due
+      </button>
+      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'CANCELLED'" (click)="onStatusChange('CANCELLED')">
+        Cancelled
+      </button>
+    </div>
+
+    <div class="search-box">
+      <input
+        type="search"
+        placeholder="Filter by merchant name, plan tier, locality..."
+        [value]="searchQuery()"
+        (input)="onSearchChange($event)"
+        class="search-input" />
+    </div>
+  </div>
+
+  <!-- Data Table -->
+  <div class="table-container">
+    <admin-data-table
+      [columns]="tableColumns"
+      [data]="filteredSubscriptions()"
+      [totalCount]="filteredSubscriptions().length"
+      [loading]="store.loading()"
+      (rowClick)="onRowClick($event)">
+    </admin-data-table>
+  </div>
 </div>

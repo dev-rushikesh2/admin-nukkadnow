@@ -1,6 +1,7 @@
 import { Component, OnInit, signal, inject, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { PageHeaderComponent } from '@nukkadnow/admin-ui';
 import { DataTableComponent, TableColumn } from '@nukkadnow/admin-data-table';
 import { AdminApiClient, AdminEndpoints } from '@nukkadnow/admin-api-client';
@@ -28,8 +29,9 @@ export interface AuditTrailRow {
         title="Administrative Audit & Security Trail"
         subtitle="Immutable append-only log of high-privilege interventions and PII access."
         breadcrumb="Console / Governance / Audit Trail">
-        <div actions>
+        <div actions class="header-actions">
           <button class="admin-btn btn-secondary btn-sm" (click)="loadLogs()">↻ Refresh</button>
+          <button class="admin-btn btn-outline btn-sm" (click)="exportRecords()">📥 Export Audited CSV</button>
         </div>
       </admin-page-header>
 
@@ -82,13 +84,15 @@ export interface AuditTrailRow {
           [columns]="tableColumns"
           [data]="filteredLogs()"
           [totalCount]="filteredLogs().length"
-          [loading]="loading()">
+          [loading]="loading()"
+          (rowClick)="onRowClick($event)">
         </admin-data-table>
       </div>
     </div>
   `,
   styles: [`
     .audit-page-container { display: flex; flex-direction: column; gap: 16px; }
+    .header-actions { display: flex; gap: 10px; align-items: center; }
     .audit-filter-bar {
       display: flex; justify-content: space-between; align-items: center; gap: 16px;
       background: var(--admin-bg-surface); border: 1px solid var(--admin-border-subtle);
@@ -122,6 +126,7 @@ export interface AuditTrailRow {
 export class AuditLogsListPageComponent implements OnInit {
   private readonly api = inject(AdminApiClient);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly router = inject(Router);
 
   private rawLogs: AuditTrailRow[] = [];
   filteredLogs = signal<AuditTrailRow[]>([]);
@@ -165,6 +170,36 @@ export class AuditLogsListPageComponent implements OnInit {
   setCategory(cat: string): void {
     this.selectedCat = cat;
     this.applyFilter();
+  }
+
+  onRowClick(row: AuditTrailRow): void {
+    this.router.navigate(['/audit-logs', row.id]);
+  }
+
+  exportRecords(): void {
+    const logs = this.filteredLogs();
+    if (!logs.length) return;
+
+    const headers = ['ID', 'Timestamp', 'Action', 'Entity', 'TargetID', 'Operator', 'ReasonCode', 'Justification'];
+    const rows = logs.map(l => [
+      l.id,
+      l.timestamp,
+      l.action,
+      l.targetEntity,
+      l.targetId,
+      `"${l.operatorName.replace(/"/g, '""')}"`,
+      l.reasonCode,
+      `"${l.justification.replace(/"/g, '""')}"`,
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `nukkadnow-audit-trail-${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
 
   applyFilter(): void {

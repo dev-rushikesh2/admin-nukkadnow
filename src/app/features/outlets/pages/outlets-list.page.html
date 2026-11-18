@@ -1,19 +1,136 @@
 <div class="outlets-page-container">
   <admin-page-header
-    title="Outlets & Geofences"
-    subtitle="Physical merchant outlets, operating hours, capacity rules and Nagpur locality geofences"
-    breadcrumb="Console / Outlets & Geofences">
+    [title]="'Storefront Outlets & Capacity — ' + (sessionService.geoAssignment()?.cityName || (selectedCity() === 'ALL' ? 'Global Grid' : selectedCity()))"
+    subtitle="Monitor merchant shop capacity, live order ingestion rates, and emergency surge throttling"
+    breadcrumb="Console / Storefront Outlets">
     <div actions>
-      <button class="admin-btn btn-secondary btn-sm" (click)="refresh()">↻ Refresh</button>
-      <button class="admin-btn btn-primary btn-sm" (click)="exportRecords()">Export CSV</button>
+      <button type="button" class="admin-btn btn-secondary btn-sm" (click)="refresh()">↻ Refresh</button>
+      <button type="button" class="admin-btn btn-primary btn-sm" (click)="exportCsv()">Export CSV</button>
     </div>
   </admin-page-header>
 
-  <admin-data-table
-    [columns]="tableColumns"
-    [data]="store.items()"
-    [totalCount]="store.totalCount()"
-    [loading]="store.loading()"
-    (rowClick)="onRowClick($event)">
-  </admin-data-table>
+  <!-- City Scope Selection -->
+  @if (sessionService.isRoot() || sessionService.isSuperAdmin()) {
+    <div class="territory-filter-bar">
+      <span class="bar-lbl">Territory Filter:</span>
+      <div class="city-pills">
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'ALL'" (click)="onCityChange('ALL')">All Cities (Global)</button>
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'Nagpur'" (click)="onCityChange('Nagpur')">📍 Nagpur</button>
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'Akola'" (click)="onCityChange('Akola')">📍 Akola</button>
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'Amravati'" (click)="onCityChange('Amravati')">📍 Amravati</button>
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'Pune'" (click)="onCityChange('Pune')">📍 Pune</button>
+      </div>
+    </div>
+  } @else if (sessionService.geoAssignment()) {
+    <div class="geo-locked-banner">
+      <span>📍 Storefront outlet fulfillment controls scoped strictly to <strong>{{ sessionService.geoAssignment()?.cityName }} Municipal Territory</strong></span>
+    </div>
+  }
+
+  <!-- Summary Metric Chips -->
+  <div class="outlets-metrics-row">
+    <div class="ometric-chip blue">
+      <span class="ometric-val">{{ totalOutletsCount() }}</span>
+      <span class="ometric-lbl">Active Storefronts</span>
+    </div>
+    <div class="ometric-chip green">
+      <span class="ometric-val">{{ openOutletsCount() }}</span>
+      <span class="ometric-lbl">Accepting Orders</span>
+    </div>
+    <div class="ometric-chip amber">
+      <span class="ometric-val">{{ busyOutletsCount() }}</span>
+      <span class="ometric-lbl">Near Peak Capacity / Throttled</span>
+    </div>
+    <div class="ometric-chip purple">
+      <span class="ometric-val">{{ avgCapacityUtilization() }}%</span>
+      <span class="ometric-lbl">Avg Fulfillment Load</span>
+    </div>
+  </div>
+
+  <!-- Operational Filter Toolbar -->
+  <div class="filter-toolbar">
+    <div class="status-tabs">
+      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'ALL'" (click)="onStatusChange('ALL')">
+        All Outlets ({{ store.items().length }})
+      </button>
+      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'OPEN'" (click)="onStatusChange('OPEN')">
+        Open
+      </button>
+      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'BUSY'" (click)="onStatusChange('BUSY')">
+        Busy / Throttled
+      </button>
+      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'PAUSED'" (click)="onStatusChange('PAUSED')">
+        Paused
+      </button>
+      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'CLOSED'" (click)="onStatusChange('CLOSED')">
+        Closed
+      </button>
+    </div>
+
+    <div class="search-box">
+      <input
+        type="search"
+        placeholder="Filter by outlet name, parent merchant, locality..."
+        [value]="searchQuery()"
+        (input)="onSearchChange($event)"
+        class="search-input" />
+    </div>
+  </div>
+
+  <!-- Data Table -->
+  <div class="table-container">
+    <admin-data-table
+      [columns]="tableColumns"
+      [data]="filteredOutlets()"
+      [totalCount]="filteredOutlets().length"
+      [loading]="store.loading()"
+      (rowClick)="onRowClick($event)">
+    </admin-data-table>
+  </div>
+
+  <!-- Emergency Throttle Modal -->
+  @if (isThrottleModalOpen()) {
+    <div class="modal-backdrop" (click)="closeThrottleModal()">
+      <div class="modal-panel" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div>
+            <h3>Emergency Capacity Throttle</h3>
+            <p>{{ activeOutletForThrottle()?.storeName }}</p>
+          </div>
+          <button type="button" class="close-btn" (click)="closeThrottleModal()">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="current-state-badge">
+            <span>Current Status: <strong>{{ activeOutletForThrottle()?.status }}</strong></span>
+            <span>Capacity Limit: <strong>{{ activeOutletForThrottle()?.hourlyCapacity }} orders/hr</strong></span>
+          </div>
+
+          <p class="throttle-warning">
+            Overriding capacity limits will instantly alter how the checkout customer routing engine distributes orders to this storefront.
+          </p>
+
+          <div class="form-group">
+            <label>Audited Reason for Intervention *</label>
+            <input
+              type="text"
+              [(ngModel)]="throttleReason"
+              placeholder="e.g. Counter equipment issue or rain delay"
+              class="form-control" />
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="admin-btn btn-secondary" (click)="closeThrottleModal()">Cancel</button>
+            <button
+              type="button"
+              class="admin-btn btn-warning"
+              [disabled]="isSubmitting() || !throttleReason()"
+              (click)="confirmThrottle()">
+              @if (isSubmitting()) { Processing... } @else { Confirm Throttle Override }
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
 </div>

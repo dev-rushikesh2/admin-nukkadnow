@@ -1,8 +1,18 @@
 export interface PricingPlanViewModel {
   id: string;
+  title: string;
   name?: string;
-  title?: string;
-  status: string;
+  monthlyPricePaise: number;
+  monthlyPriceFormatted: string;
+  annualPricePaise: number;
+  annualPriceFormatted: string;
+  isPopular: boolean;
+  maxOutlets: number;
+  maxCatalogSkus: number;
+  commissionDiscountBps: number;
+  prioritySupport: boolean;
+  entitlements: string[];
+  status: 'ACTIVE' | 'ARCHIVED';
   createdAt: string;
   updatedAt?: string;
   metadata?: Record<string, unknown>;

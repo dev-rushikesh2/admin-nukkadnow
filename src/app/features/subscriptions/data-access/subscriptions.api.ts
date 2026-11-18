@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, of } from 'rxjs';
+import { Observable } from 'rxjs';
 import { AdminApiClient, ApiResponse, PaginatedResult } from '@nukkadnow/admin-api-client';
 import { MerchantSubscriptionViewModel, MerchantSubscriptionFilterCriteria } from '../models/subscriptions-view.model';
 
@@ -18,7 +18,19 @@ export class SubscriptionsApi {
     return this.client.get<MerchantSubscriptionViewModel>(`${this.endpoint}/${id}`);
   }
 
+  extendGracePeriod(id: string, days: number, reasonCode?: string): Observable<ApiResponse<MerchantSubscriptionViewModel>> {
+    return this.client.patch<MerchantSubscriptionViewModel>(
+      `${this.endpoint}/${id}/grace-period`,
+      { days },
+      { reasonCode: reasonCode || 'MERCHANT_RETENTION_GRACE' }
+    );
+  }
+
   updateStatus(id: string, status: string, reasonCode?: string): Observable<ApiResponse<MerchantSubscriptionViewModel>> {
-    return this.client.patch<MerchantSubscriptionViewModel>(`${this.endpoint}/${id}/status`, { status }, { reasonCode });
+    return this.client.patch<MerchantSubscriptionViewModel>(
+      `${this.endpoint}/${id}/status`,
+      { status },
+      { reasonCode: reasonCode || 'SUBSCRIPTION_STATE_CHANGE' }
+    );
   }
 }

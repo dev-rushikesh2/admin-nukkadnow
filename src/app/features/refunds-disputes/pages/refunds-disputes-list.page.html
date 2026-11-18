@@ -1,19 +1,64 @@
-<div class="refunds-disputes-page-container">
+<div class="refunds-page-container">
   <admin-page-header
-    title="Refunds & Disputes Ledger"
-    subtitle="Customer refund requests, dual-approval authorization ledger and chargeback investigations"
-    breadcrumb="Console / Refunds & Disputes Ledger">
+    title="Refunds, Customer Disputes & Dual-Sign Approvals"
+    [subtitle]="'Manage customer reimbursement authorizations with four-eyes separation of duties for > ₹5,000 across ' + activeCityName()"
+    breadcrumb="Console / Financials / Refunds">
     <div actions>
-      <button class="admin-btn btn-secondary btn-sm" (click)="refresh()">↻ Refresh</button>
-      <button class="admin-btn btn-primary btn-sm" (click)="exportRecords()">Export CSV</button>
+      <span class="badge badge-danger">Dual-Sign Enforced (&gt; ₹5,000)</span>
+      <button type="button" class="admin-btn btn-secondary btn-sm" (click)="loadRefunds()">↻ Refresh</button>
     </div>
   </admin-page-header>
 
-  <admin-data-table
-    [columns]="tableColumns"
-    [data]="store.items()"
-    [totalCount]="store.totalCount()"
-    [loading]="store.loading()"
-    (rowClick)="onRowClick($event)">
-  </admin-data-table>
+  <!-- City Scope Filter Bar (for Root & Super Admin) -->
+  @if (sessionService.isRoot() || sessionService.isSuperAdmin()) {
+    <div class="city-selector-bar">
+      <span class="bar-lbl">Territory Filter:</span>
+      <div class="city-pills">
+        <button type="button" class="cpill" [class.active]="selectedCity === 'ALL'" (click)="onCityChange('ALL')">All Cities (Global)</button>
+        <button type="button" class="cpill" [class.active]="selectedCity === 'Nagpur'" (click)="onCityChange('Nagpur')">📍 Nagpur</button>
+        <button type="button" class="cpill" [class.active]="selectedCity === 'Akola'" (click)="onCityChange('Akola')">📍 Akola</button>
+        <button type="button" class="cpill" [class.active]="selectedCity === 'Amravati'" (click)="onCityChange('Amravati')">📍 Amravati</button>
+        <button type="button" class="cpill" [class.active]="selectedCity === 'Pune'" (click)="onCityChange('Pune')">📍 Pune</button>
+      </div>
+    </div>
+  } @else if (sessionService.geoAssignment()) {
+    <div class="geo-locked-banner">
+      <span>📍 Refund disputes scoped strictly to <strong>{{ sessionService.geoAssignment()?.cityName }} Municipal Territory</strong></span>
+    </div>
+  }
+
+  <!-- Dual-Sign Escalation Metrics Row -->
+  <div class="refunds-metrics-row">
+    <div class="rmetric-chip red">
+      <span class="rmetric-val">{{ dualSignRequiredCount() }}</span>
+      <span class="rmetric-lbl">High-Value Dual-Sign Required (&gt; ₹5,000)</span>
+    </div>
+    <div class="rmetric-chip amber">
+      <span class="rmetric-val">{{ pendingFirstApprovalCount() }}</span>
+      <span class="rmetric-lbl">Pending Initial Investigation Sign-off</span>
+    </div>
+    <div class="rmetric-chip blue">
+      <span class="rmetric-val">{{ refunds().length }}</span>
+      <span class="rmetric-lbl">Total Dispute Cases</span>
+    </div>
+  </div>
+
+  <!-- Status Filter Toolbar -->
+  <div class="status-filter-bar">
+    <button type="button" class="stab" [class.active]="selectedStatus === ''" (click)="filterStatus('')">All Disputes ({{ refunds().length }})</button>
+    <button type="button" class="stab" [class.active]="selectedStatus === 'PENDING_FIRST_APPROVAL'" (click)="filterStatus('PENDING_FIRST_APPROVAL')">⏳ 1st Sign Needed</button>
+    <button type="button" class="stab" [class.active]="selectedStatus === 'PENDING_SECOND_APPROVAL'" (click)="filterStatus('PENDING_SECOND_APPROVAL')">🔐 2nd Sign Needed (MFA)</button>
+    <button type="button" class="stab" [class.active]="selectedStatus === 'APPROVED'" (click)="filterStatus('APPROVED')">✓ Processed & Credited</button>
+    <button type="button" class="stab" [class.active]="selectedStatus === 'REJECTED'" (click)="filterStatus('REJECTED')">✕ Denied Claims</button>
+  </div>
+
+  <div class="table-card">
+    <admin-data-table
+      [columns]="tableColumns"
+      [data]="refunds()"
+      [totalCount]="refunds().length"
+      [loading]="loading()"
+      (rowClick)="onRowClick($event)">
+    </admin-data-table>
+  </div>
 </div>

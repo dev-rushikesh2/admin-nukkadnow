@@ -1,19 +1,216 @@
-<div class="system-health-page-container">
+<div class="system-health-container">
   <admin-page-header
-    title="System Health & Telemetry"
-    subtitle="Microservice mesh status, Redis memory usage, RabbitMQ queue lag and database pools"
-    breadcrumb="Console / System Health & Telemetry">
-    <div actions>
-      <button class="admin-btn btn-secondary btn-sm" (click)="refresh()">↻ Refresh</button>
-      <button class="admin-btn btn-primary btn-sm" (click)="exportRecords()">Export CSV</button>
+    title="Infrastructure Mesh & Telemetry Health"
+    subtitle="Live distributed systems monitoring, node telemetry, Redis cache partitions, and database connection pools."
+    breadcrumb="Console / Platform Governance / System Health">
+    <div actions class="header-actions">
+      <button class="admin-btn btn-secondary btn-sm" (click)="refresh()">
+        ↻ Refresh Telemetry
+      </button>
+      <button class="admin-btn btn-outline btn-sm" (click)="exportRecords()">
+        📥 Export Metrics CSV
+      </button>
+      <button class="admin-btn btn-danger btn-sm" (click)="openFlushModal()">
+        ⚡ Flush Redis Cache
+      </button>
     </div>
   </admin-page-header>
 
-  <admin-data-table
-    [columns]="tableColumns"
-    [data]="store.items()"
-    [totalCount]="store.totalCount()"
-    [loading]="store.loading()"
-    (rowClick)="onRowClick($event)">
-  </admin-data-table>
+  <!-- Health Master Banner -->
+  @if (store.summary(); as summary) {
+    <div class="mesh-summary-banner">
+      <div class="summary-item">
+        <span class="dot-indicator green"></span>
+        <div class="summary-content">
+          <span class="sub-label">Cluster Status</span>
+          <span class="main-val">{{ summary.overallStatus }}</span>
+        </div>
+      </div>
+
+      <div class="summary-divider"></div>
+
+      <div class="summary-item">
+        <div class="summary-content">
+          <span class="sub-label">Platform Mesh P95 Latency</span>
+          <span class="main-val text-accent">{{ summary.p95LatencyMs }} ms</span>
+        </div>
+      </div>
+
+      <div class="summary-divider"></div>
+
+      <div class="summary-item">
+        <div class="summary-content">
+          <span class="sub-label">Global Service SLA</span>
+          <span class="main-val text-success">99.98%</span>
+        </div>
+      </div>
+
+      <div class="summary-divider"></div>
+
+      <div class="summary-item">
+        <div class="summary-content">
+          <span class="sub-label">Monitored Services</span>
+          <span class="main-val">{{ summary.nodes.length }} active nodes</span>
+        </div>
+      </div>
+
+      <div class="view-switch-group">
+        <button
+          type="button"
+          class="switch-btn"
+          [class.active]="viewMode() === 'grid'"
+          (click)="toggleView('grid')">
+          ⊞ Grid
+        </button>
+        <button
+          type="button"
+          class="switch-btn"
+          [class.active]="viewMode() === 'table'"
+          (click)="toggleView('table')">
+          ☰ Table
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- View Mode: Grid of Microservice Mesh Nodes -->
+  @if (viewMode() === 'grid') {
+    <div class="mesh-nodes-grid">
+      @for (node of store.items(); track node.service) {
+        <div class="node-card" (click)="onRowClick(node)">
+          <div class="node-card-header">
+            <div class="node-title-group">
+              <span class="node-name">{{ node.name }}</span>
+              <span class="node-code font-mono">{{ node.service }}</span>
+            </div>
+            <admin-system-health-status-chip [status]="node.status"></admin-system-health-status-chip>
+          </div>
+
+          <div class="node-metrics-list">
+            <div class="metric-row">
+              <span class="m-label">P95 Latency:</span>
+              <span class="m-val font-mono" [class.text-accent]="node.latencyMs <= 25" [class.text-warning]="node.latencyMs > 25">
+                {{ node.latencyMs }} ms
+              </span>
+            </div>
+
+            @if (node.cpuUsagePct !== undefined) {
+              <div class="metric-row meter">
+                <div class="m-label-group">
+                  <span class="m-label">CPU Load:</span>
+                  <span class="m-val font-mono">{{ node.cpuUsagePct }}%</span>
+                </div>
+                <div class="progress-track">
+                  <div class="progress-fill" [style.width.%]="node.cpuUsagePct"></div>
+                </div>
+              </div>
+            }
+
+            @if (node.memoryUsageMb !== undefined) {
+              <div class="metric-row">
+                <span class="m-label">Memory:</span>
+                <span class="m-val font-mono">{{ node.memoryUsageMb }} MB</span>
+              </div>
+            }
+
+            @if (node.activePoolConnections !== undefined) {
+              <div class="metric-row">
+                <span class="m-label">Active Pool:</span>
+                <span class="m-val font-mono text-accent">{{ node.activePoolConnections }} connections</span>
+              </div>
+            }
+          </div>
+
+          <div class="node-card-footer">
+            <span class="port-sub font-mono">
+              @if (node.port) { Port :{{ node.port }} } @else { Cluster Instance }
+            </span>
+            <span class="inspect-btn">Inspect Node →</span>
+          </div>
+        </div>
+      }
+    </div>
+  } @else {
+    <!-- View Mode: Data Table -->
+    <div class="table-card">
+      <admin-data-table
+        [columns]="tableColumns"
+        [data]="store.items()"
+        [totalCount]="store.totalCount()"
+        [loading]="store.loading()"
+        (rowClick)="onRowClick($event)">
+
+        <ng-template tableCell="service" let-item>
+          <div class="service-cell">
+            <strong>{{ item.name }}</strong>
+            <span class="font-mono sub-text">{{ item.service }}</span>
+          </div>
+        </ng-template>
+
+        <ng-template tableCell="status" let-item>
+          <admin-system-health-status-chip [status]="item.status"></admin-system-health-status-chip>
+        </ng-template>
+
+        <ng-template tableCell="latencyMs" let-item>
+          <span class="font-mono text-accent">{{ item.latencyMs }} ms</span>
+        </ng-template>
+
+        <ng-template tableCell="cpuUsagePct" let-item>
+          <span class="font-mono">{{ item.cpuUsagePct || 0 }}%</span>
+        </ng-template>
+
+        <ng-template tableCell="memoryUsageMb" let-item>
+          <span class="font-mono">{{ item.memoryUsageMb || 0 }} MB</span>
+        </ng-template>
+
+        <ng-template tableCell="port" let-item>
+          <span class="font-mono">{{ item.port ? ':' + item.port : 'Cluster Node' }}</span>
+        </ng-template>
+
+      </admin-data-table>
+    </div>
+  }
+
+  <!-- Flush Cache Modal -->
+  @if (showFlushModal()) {
+    <div class="modal-backdrop" (click)="closeFlushModal()">
+      <div class="modal-dialog" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Flush Redis Cache Partition</h3>
+          <button class="close-x" (click)="closeFlushModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="alert-box-warning">
+            ⚠️ <strong>Step-Up Security Action:</strong> Flushing cache partitions will force all downstream
+            services to re-query the PostgreSQL primary cluster. This action is recorded in immutable audit logs.
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Cache Partition Target:</label>
+            <select class="admin-input" [(ngModel)]="selectedPartition">
+              <option value="ALL_PARTITIONS">All Partitions (Full Cluster Flush)</option>
+              <option value="LOCALITY_PILOT_CACHE">Locality & Geofence Polygon Cache</option>
+              <option value="CATALOG_PRICE_CEILINGS">Catalog Price Ceilings & Categories</option>
+              <option value="MERCHANT_SESSION_TOKENS">Merchant POS Discovery Cache</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Operational Reason Code:</label>
+            <input
+              type="text"
+              class="admin-input"
+              [(ngModel)]="flushReason"
+              placeholder="e.g. CACHE_CONSISTENCY_SYNC">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="admin-btn btn-secondary btn-sm" (click)="closeFlushModal()">Cancel</button>
+          <button class="admin-btn btn-danger btn-sm" (click)="confirmFlushCache()">
+            ⚡ Confirm Cache Flush
+          </button>
+        </div>
+      </div>
+    </div>
+  }
 </div>

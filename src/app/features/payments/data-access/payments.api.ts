@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, of } from 'rxjs';
+import { Observable } from 'rxjs';
 import { AdminApiClient, ApiResponse, PaginatedResult } from '@nukkadnow/admin-api-client';
 import { PaymentTransactionViewModel, PaymentTransactionFilterCriteria } from '../models/payments-view.model';
 
@@ -18,7 +18,15 @@ export class PaymentsApi {
     return this.client.get<PaymentTransactionViewModel>(`${this.endpoint}/${id}`);
   }
 
-  updateStatus(id: string, status: string, reasonCode?: string): Observable<ApiResponse<PaymentTransactionViewModel>> {
-    return this.client.patch<PaymentTransactionViewModel>(`${this.endpoint}/${id}/status`, { status }, { reasonCode });
+  replayWebhook(id: string): Observable<ApiResponse<{ replayed: boolean; deliveryTimestamp: string }>> {
+    return this.client.post<{ replayed: boolean; deliveryTimestamp: string }>(`${this.endpoint}/webhooks/${id}/replay`, {});
+  }
+
+  releaseEscrow(id: string, reasonCode?: string): Observable<ApiResponse<PaymentTransactionViewModel>> {
+    return this.client.patch<PaymentTransactionViewModel>(
+      `${this.endpoint}/${id}/escrow/release`,
+      {},
+      { reasonCode: reasonCode || 'MANUAL_ESCROW_RELEASE' }
+    );
   }
 }

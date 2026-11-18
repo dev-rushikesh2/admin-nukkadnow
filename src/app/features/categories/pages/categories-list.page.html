@@ -1,19 +1,163 @@
 <div class="categories-page-container">
   <admin-page-header
-    title="Category Taxonomy"
-    subtitle="Hyperlocal marketplace product taxonomy, commission rates and regulatory classifications"
-    breadcrumb="Console / Category Taxonomy">
+    title="Taxonomy & Commission Slabs"
+    subtitle="Configure platform-wide product categories, take-rate commission slabs, and GST tax rules"
+    breadcrumb="Console / Taxonomy & Categories">
     <div actions>
-      <button class="admin-btn btn-secondary btn-sm" (click)="refresh()">↻ Refresh</button>
-      <button class="admin-btn btn-primary btn-sm" (click)="exportRecords()">Export CSV</button>
+      <button type="button" class="admin-btn btn-secondary btn-sm" (click)="refresh()">↻ Refresh</button>
+      <button type="button" class="admin-btn btn-secondary btn-sm" (click)="exportCsv()">Export CSV</button>
+      <button type="button" class="admin-btn btn-primary btn-sm" (click)="openAddModal()">+ Add Category</button>
     </div>
   </admin-page-header>
 
-  <admin-data-table
-    [columns]="tableColumns"
-    [data]="store.items()"
-    [totalCount]="store.totalCount()"
-    [loading]="store.loading()"
-    (rowClick)="onRowClick($event)">
-  </admin-data-table>
+  <!-- Summary Metric Chips -->
+  <div class="categories-metrics-row">
+    <div class="cmetric-chip blue">
+      <span class="cmetric-val">{{ totalCategoriesCount() }}</span>
+      <span class="cmetric-lbl">Active Taxonomies</span>
+    </div>
+    <div class="cmetric-chip green">
+      <span class="cmetric-val">{{ avgCommissionRate() }}%</span>
+      <span class="cmetric-lbl">Average Take-Rate Slab</span>
+    </div>
+    <div class="cmetric-chip purple">
+      <span class="cmetric-val">{{ totalSkuCount() }}</span>
+      <span class="cmetric-lbl">Catalog SKUs Governed</span>
+    </div>
+    <div class="cmetric-chip amber">
+      <span class="cmetric-val">0%, 5%, 12%, 18%</span>
+      <span class="cmetric-lbl">GST Slabs Enforced</span>
+    </div>
+  </div>
+
+  <!-- Operational Filter Toolbar -->
+  <div class="filter-toolbar">
+    <div class="status-tabs">
+      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'ALL'" (click)="onStatusChange('ALL')">
+        All Categories ({{ store.items().length }})
+      </button>
+      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'ACTIVE'" (click)="onStatusChange('ACTIVE')">
+        Active
+      </button>
+      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'DRAFT'" (click)="onStatusChange('DRAFT')">
+        Draft / Staging
+      </button>
+      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'ARCHIVED'" (click)="onStatusChange('ARCHIVED')">
+        Archived
+      </button>
+    </div>
+
+    <div class="search-box">
+      <input
+        type="search"
+        placeholder="Filter by category title or taxonomy code..."
+        [value]="searchQuery()"
+        (input)="onSearchChange($event)"
+        class="search-input" />
+    </div>
+  </div>
+
+  <!-- Data Table -->
+  <div class="table-container">
+    <admin-data-table
+      [columns]="tableColumns"
+      [data]="filteredCategories()"
+      [totalCount]="filteredCategories().length"
+      [loading]="store.loading()"
+      (rowClick)="onRowClick($event)">
+    </admin-data-table>
+  </div>
+
+  <!-- Add Category Modal -->
+  @if (isAddModalOpen()) {
+    <div class="modal-backdrop" (click)="closeAddModal()">
+      <div class="modal-panel" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div>
+            <h3>Create Product Category</h3>
+            <p>Provision a new marketplace taxonomy classification and fee schedule</p>
+          </div>
+          <button type="button" class="close-btn" (click)="closeAddModal()">✕</button>
+        </div>
+
+        <form (ngSubmit)="submitNewCategory()" class="modal-body">
+          <div class="form-row">
+            <div class="form-group emoji-group">
+              <label>Icon / Emoji</label>
+              <input
+                type="text"
+                name="emoji"
+                [(ngModel)]="newCategory.emoji"
+                maxlength="4"
+                class="form-control text-center emoji-input" />
+            </div>
+
+            <div class="form-group flex-1">
+              <label>Category Title *</label>
+              <input
+                type="text"
+                name="name"
+                [(ngModel)]="newCategory.name"
+                (ngModelChange)="onNameChange()"
+                placeholder="e.g. Organic Fruits & Veggies"
+                required
+                class="form-control" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>System Taxonomy Code *</label>
+            <input
+              type="text"
+              name="code"
+              [(ngModel)]="newCategory.code"
+              placeholder="e.g. CAT_ORGANIC_PRODUCE"
+              class="form-control font-mono" />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Platform Commission Slab (%) *</label>
+              <input
+                type="number"
+                step="0.5"
+                min="0"
+                max="30"
+                name="commissionPct"
+                [(ngModel)]="newCategory.commissionPct"
+                class="form-control" />
+            </div>
+
+            <div class="form-group">
+              <label>Statutory GST Slab (%)</label>
+              <select name="gstSlabPct" [(ngModel)]="newCategory.gstSlabPct" class="form-control">
+                <option [ngValue]="0">0% (Nil / Exempted Food)</option>
+                <option [ngValue]="5">5% (Essential Kirana)</option>
+                <option [ngValue]="12">12% (Processed Confectionery)</option>
+                <option [ngValue]="18">18% (Packaged Consumer Goods)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Initial Status</label>
+            <select name="status" [(ngModel)]="newCategory.status" class="form-control">
+              <option value="ACTIVE">ACTIVE — Instantly Visible in Catalog</option>
+              <option value="DRAFT">DRAFT — Hidden from Merchant App</option>
+            </select>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="admin-btn btn-secondary" (click)="closeAddModal()">Cancel</button>
+            <button
+              type="submit"
+              class="admin-btn btn-primary"
+              [disabled]="isSubmitting() || !newCategory.name">
+              @if (isSubmitting()) { Creating... } @else { Save Category }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
 </div>

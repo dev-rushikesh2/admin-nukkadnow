@@ -24,6 +24,10 @@ export class NotificationsRepository {
     return this.api.getById(id).pipe(map(res => NotificationsMapper.toViewModel(res.data)));
   }
 
+  createItem(payload: Partial<BroadcastNotificationViewModel>): Observable<BroadcastNotificationViewModel> {
+    return this.api.create(payload).pipe(map(res => NotificationsMapper.toViewModel(res.data)));
+  }
+
   changeStatus(id: string, status: string, reasonCode?: string): Observable<BroadcastNotificationViewModel> {
     return this.api.updateStatus(id, status, reasonCode).pipe(map(res => NotificationsMapper.toViewModel(res.data)));
   }

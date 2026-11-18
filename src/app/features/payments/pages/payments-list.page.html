@@ -1,19 +1,106 @@
 <div class="payments-page-container">
   <admin-page-header
-    title="Payments & Settlement Ledgers"
-    subtitle="Payment gateway intents, escrow settlements, and failed PSP webhook replay tooling"
-    breadcrumb="Console / Payments & Settlement Ledgers">
+    [title]="'Payments Ledger & Settlements — ' + (sessionService.geoAssignment()?.cityName || (selectedCity() === 'ALL' ? 'Global Grid' : selectedCity()))"
+    subtitle="Audit gateway transactions, manage merchant escrow releases, and replay failed webhooks"
+    breadcrumb="Console / Financials & Payments">
     <div actions>
-      <button class="admin-btn btn-secondary btn-sm" (click)="refresh()">↻ Refresh</button>
-      <button class="admin-btn btn-primary btn-sm" (click)="exportRecords()">Export CSV</button>
+      <button type="button" class="admin-btn btn-secondary btn-sm" (click)="refresh()">↻ Refresh</button>
+      <button type="button" class="admin-btn btn-secondary btn-sm" (click)="exportCsv()">Export CSV</button>
+      @if (failedWebhooksCount() > 0) {
+        <button
+          type="button"
+          class="admin-btn btn-warning btn-sm"
+          [disabled]="isReplaying()"
+          (click)="replayFailedWebhooks()">
+          @if (isReplaying()) { Replaying Webhooks... } @else { ↻ Replay {{ failedWebhooksCount() }} Failed Webhooks }
+        </button>
+      }
     </div>
   </admin-page-header>
 
-  <admin-data-table
-    [columns]="tableColumns"
-    [data]="store.items()"
-    [totalCount]="store.totalCount()"
-    [loading]="store.loading()"
-    (rowClick)="onRowClick($event)">
-  </admin-data-table>
+  <!-- Replay Success Notification -->
+  @if (replaySuccessMsg()) {
+    <div class="alert-banner success">
+      <span>✓ {{ replaySuccessMsg() }}</span>
+    </div>
+  }
+
+  <!-- City Scope Selection -->
+  @if (sessionService.isRoot() || sessionService.isSuperAdmin()) {
+    <div class="territory-filter-bar">
+      <span class="bar-lbl">Territory Filter:</span>
+      <div class="city-pills">
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'ALL'" (click)="onCityChange('ALL')">All Cities (Global)</button>
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'Nagpur'" (click)="onCityChange('Nagpur')">📍 Nagpur</button>
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'Akola'" (click)="onCityChange('Akola')">📍 Akola</button>
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'Amravati'" (click)="onCityChange('Amravati')">📍 Amravati</button>
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'Pune'" (click)="onCityChange('Pune')">📍 Pune</button>
+      </div>
+    </div>
+  } @else if (sessionService.geoAssignment()) {
+    <div class="geo-locked-banner">
+      <span>📍 Payment settlements and escrow balances scoped strictly to <strong>{{ sessionService.geoAssignment()?.cityName }} Municipal Territory</strong></span>
+    </div>
+  }
+
+  <!-- Summary Metric Chips -->
+  <div class="payments-metrics-row">
+    <div class="pmetric-chip blue">
+      <span class="pmetric-val">{{ totalVolumeFormatted() }}</span>
+      <span class="pmetric-lbl">Gross Settled Volume</span>
+    </div>
+    <div class="pmetric-chip green">
+      <span class="pmetric-val">{{ capturedCount() }}</span>
+      <span class="pmetric-lbl">Captured Transactions</span>
+    </div>
+    <div class="pmetric-chip amber">
+      <span class="pmetric-val">{{ escrowHoldingFormatted() }}</span>
+      <span class="pmetric-lbl">Escrow Under Holding</span>
+    </div>
+    <div class="pmetric-chip" [class.red]="failedWebhooksCount() > 0" [class.purple]="failedWebhooksCount() === 0">
+      <span class="pmetric-val">{{ failedWebhooksCount() }}</span>
+      <span class="pmetric-lbl">Failed Webhook Events</span>
+    </div>
+  </div>
+
+  <!-- Operational Filter Toolbar -->
+  <div class="filter-toolbar">
+    <div class="status-tabs">
+      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'ALL'" (click)="onStatusChange('ALL')">
+        All ({{ store.items().length }})
+      </button>
+      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'CAPTURED'" (click)="onStatusChange('CAPTURED')">
+        Captured
+      </button>
+      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'SETTLED'" (click)="onStatusChange('SETTLED')">
+        Settled
+      </button>
+      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'PENDING'" (click)="onStatusChange('PENDING')">
+        Pending
+      </button>
+      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'FAILED'" (click)="onStatusChange('FAILED')">
+        Failed
+      </button>
+    </div>
+
+    <div class="search-box">
+      <input
+        type="search"
+        placeholder="Filter by txn ID, order ID, customer, merchant, gateway ref..."
+        [value]="searchQuery()"
+        (input)="onSearchChange($event)"
+        class="search-input" />
+    </div>
+  </div>
+
+  <!-- Data Table -->
+  <div class="table-container">
+    <admin-data-table
+      [columns]="tableColumns"
+      [data]="filteredPayments()"
+      [totalCount]="filteredPayments().length"
+      [loading]="store.loading()"
+      (rowClick)="onRowClick($event)">
+    </admin-data-table>
+  </div>
 </div>
