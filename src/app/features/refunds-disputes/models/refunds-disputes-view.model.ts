@@ -28,6 +28,8 @@ export interface RefundDisputeViewModel {
 export interface RefundFilterCriteria {
   search?: string;
   status?: string;
+  page?: number;
+  limit?: number;
 }
 
 export type RefundDisputeFilterCriteria = RefundFilterCriteria;

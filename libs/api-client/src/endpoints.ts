@@ -13,6 +13,9 @@ export const AdminEndpoints = {
   AUTH_LOGOUT: '/auth/session/logout',
   AUTH_ME: '/auth/me',
 
+  // Overview & Analytics
+  OVERVIEW: '/overview',
+
   // Merchants & Outlets
   MERCHANTS: '/merchants',
   MERCHANT_BY_ID: (id: string) => `/merchants/${id}`,
@@ -21,6 +24,10 @@ export const AdminEndpoints = {
   MERCHANT_KYC_DOCUMENTS: (id: string) => `/merchants/${id}/kyc`,
   MERCHANT_KYC_VERIFY: (id: string) => `/merchants/${id}/kyc/verify`,
   MERCHANT_KYC_REJECT: (id: string) => `/merchants/${id}/kyc/reject`,
+  MERCHANT_VERIFICATION: '/merchant-verification',
+  MERCHANT_VERIFICATION_BY_ID: (id: string) => `/merchant-verification/${id}`,
+  MERCHANT_VERIFICATION_APPROVE: (id: string) => `/merchant-verification/${id}/approve`,
+  MERCHANT_VERIFICATION_REJECT: (id: string) => `/merchant-verification/${id}/reject`,
   OUTLETS: '/outlets',
   OUTLET_BY_ID: (id: string) => `/outlets/${id}`,
   OUTLET_CAPACITY_OVERRIDE: (id: string) => `/outlets/${id}/capacity/override`,

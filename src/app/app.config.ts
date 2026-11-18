@@ -21,6 +21,8 @@ import { correlationIdInterceptor } from './core/http/correlation-id.interceptor
 import { csrfInterceptor } from './core/http/csrf.interceptor';
 import { apiErrorInterceptor } from './core/http/api-error.interceptor';
 import { GlobalErrorHandler } from './core/error-handling/global-error-handler';
+import { ADMIN_API_BASE_URL } from '@nukkadnow/admin-api-client';
+import { environment } from '../environments/environment';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -40,6 +42,10 @@ export const appConfig: ApplicationConfig = {
         apiErrorInterceptor,
       ])
     ),
+    {
+      provide: ADMIN_API_BASE_URL,
+      useValue: environment.apiBaseUrl,
+    },
     {
       provide: ErrorHandler,
       useClass: GlobalErrorHandler,

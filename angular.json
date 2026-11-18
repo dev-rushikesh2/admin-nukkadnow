@@ -50,6 +50,9 @@
               "src/styles/forms.scss",
               "src/styles/global.scss"
             ],
+            "optimization": {
+              "fonts": false
+            },
             "scripts": []
           },
           "configurations": {

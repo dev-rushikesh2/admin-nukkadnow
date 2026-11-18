@@ -42,6 +42,9 @@ export interface VerificationFilterCriteria {
   search?: string;
   status?: string;
   locality?: string;
+  mode?: string;
+  page?: number;
+  limit?: number;
 }
 
 export type MerchantVerificationFilterCriteria = VerificationFilterCriteria;

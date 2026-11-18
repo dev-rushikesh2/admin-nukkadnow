@@ -55,6 +55,8 @@ export interface OrderFilterCriteria {
   search?: string;
   status?: string;
   locality?: string;
+  page?: number;
+  limit?: number;
 }
 
 export type AdminOrderFilterCriteria = OrderFilterCriteria;

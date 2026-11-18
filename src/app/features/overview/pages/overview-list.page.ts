@@ -1,16 +1,56 @@
-import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, OnInit, signal, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { PageHeaderComponent, MetricCardComponent } from '@nukkadnow/admin-ui';
 import { DataTableComponent, TableColumn } from '@nukkadnow/admin-data-table';
+import { AdminApiClient, AdminEndpoints } from '@nukkadnow/admin-api-client';
 
-interface RecentOrderRow {
+export interface RecentOrderRow {
   id: string;
   merchantName: string;
   locality: string;
   amount: string;
   status: string;
   placedAt: string;
+}
+
+export interface OverviewMetrics {
+  todayGmv: string;
+  todayGmvDelta: string;
+  activeMerchants: number;
+  activeMerchantsDelta: string;
+  inFlightOrders: number;
+  inFlightOrdersAdherence: string;
+  kycVerificationQueue: number;
+  kycQueueSla: string;
+  pendingRefunds: number;
+  pendingRefundsAmount: string;
+  meshLatency: string;
+  meshLatencyHealth: string;
+}
+
+export interface LocalityFulfillmentRow {
+  name: string;
+  outlets: number;
+  activeBatches: number;
+  pressure: number;
+  status: string;
+}
+
+export interface ActionTriageRow {
+  id: string;
+  type: string;
+  title: string;
+  meta: string;
+  route: string;
+  severity: string;
+}
+
+export interface OverviewDashboardPayload {
+  metrics: OverviewMetrics;
+  localityFulfillment: LocalityFulfillmentRow[];
+  actionTriage: ActionTriageRow[];
+  recentOrders: RecentOrderRow[];
 }
 
 @Component({
@@ -21,8 +61,16 @@ interface RecentOrderRow {
   styleUrls: ['./overview-list.page.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class OverviewListPageComponent {
+export class OverviewListPageComponent implements OnInit {
   private readonly router = inject(Router);
+  private readonly api = inject(AdminApiClient);
+  private readonly cdr = inject(ChangeDetectorRef);
+
+  readonly metrics = signal<OverviewMetrics | null>(null);
+  readonly localityFulfillment = signal<LocalityFulfillmentRow[]>([]);
+  readonly actionTriage = signal<ActionTriageRow[]>([]);
+  readonly recentOrders = signal<RecentOrderRow[]>([]);
+  readonly isLoading = signal<boolean>(false);
 
   readonly orderTableColumns: TableColumn<RecentOrderRow>[] = [
     { key: 'id', header: 'Order Ref', width: '160px', sortable: true },
@@ -30,19 +78,31 @@ export class OverviewListPageComponent {
     { key: 'locality', header: 'Nagpur Locality', width: '150px' },
     { key: 'amount', header: 'Total Value', width: '130px', align: 'right', sortable: true },
     { key: 'status', header: 'Status', width: '140px' },
-    { key: 'placedAt', header: 'Placed At', width: '140px' },
+    { key: 'placedAt', header: 'Placed At', width: '160px' },
   ];
 
-  readonly recentOrders: RecentOrderRow[] = [
-    { id: 'ORD-9821', merchantName: 'Nagpur Sweet Mart', locality: 'Dharampeth', amount: '₹ 450.00', status: 'READY_FOR_PICKUP', placedAt: '4 mins ago' },
-    { id: 'ORD-9820', merchantName: 'Apna Kirana & Grains', locality: 'Sadar', amount: '₹ 1,280.00', status: 'IN_PREPARATION', placedAt: '12 mins ago' },
-    { id: 'ORD-9819', merchantName: 'Haldiram Foods', locality: 'Sadar', amount: '₹ 850.00', status: 'REFUND_REQUESTED', placedAt: '25 mins ago' },
-    { id: 'ORD-9818', merchantName: 'Shree Ganesh Dairy', locality: 'Ramdaspeth', amount: '₹ 220.00', status: 'CONFIRMED', placedAt: '31 mins ago' },
-    { id: 'ORD-9817', merchantName: 'Vidarbha Organic Store', locality: 'Wardha Road', amount: '₹ 1,940.00', status: 'COMPLETED', placedAt: '48 mins ago' },
-  ];
+  ngOnInit(): void {
+    this.refreshMetrics();
+  }
 
   refreshMetrics(): void {
-    // In production, triggers telemetry and aggregated projection poll
+    this.isLoading.set(true);
+    this.api.get<OverviewDashboardPayload>(AdminEndpoints.OVERVIEW).subscribe({
+      next: (res) => {
+        if (res.data) {
+          this.metrics.set(res.data.metrics);
+          this.localityFulfillment.set(res.data.localityFulfillment || []);
+          this.actionTriage.set(res.data.actionTriage || []);
+          this.recentOrders.set(res.data.recentOrders || []);
+        }
+        this.isLoading.set(false);
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.isLoading.set(false);
+        this.cdr.markForCheck();
+      },
+    });
   }
 
   navigateTo(route: string): void {
