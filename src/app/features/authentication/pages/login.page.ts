@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { AdminSessionService } from '../../../core/auth/session.service';
 import { AdminRoleType } from '@nukkadnow/admin-access-control';
+import { AdminThemeService } from '../../../core/theme/theme.service';
 
 @Component({
   selector: 'admin-login-page',
@@ -12,6 +13,21 @@ import { AdminRoleType } from '@nukkadnow/admin-access-control';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="auth-page-container">
+      <div class="theme-corner-toggle">
+        <button
+          type="button"
+          class="theme-toggle-btn"
+          [attr.aria-label]="themeService.currentTheme() === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
+          [title]="themeService.currentTheme() === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
+          (click)="themeService.toggleTheme()">
+          @if (themeService.currentTheme() === 'dark') {
+            <span>☀️ Light Mode</span>
+          } @else {
+            <span>🌙 Dark Mode</span>
+          }
+        </button>
+      </div>
+
       <div class="auth-card">
         <div class="auth-header">
           <div class="logo-circle">🏪</div>
@@ -74,8 +90,36 @@ import { AdminRoleType } from '@nukkadnow/admin-access-control';
       display: flex;
       align-items: center;
       justify-content: center;
-      background: radial-gradient(circle at 50% 20%, #1e293b 0%, #090d16 100%);
+      background: radial-gradient(circle at 50% 20%, var(--admin-bg-subtle) 0%, var(--admin-bg-canvas) 100%);
       padding: 16px;
+      position: relative;
+    }
+    .theme-corner-toggle {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+    }
+    .theme-toggle-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background-color: var(--admin-bg-surface);
+      border: 1px solid var(--admin-border-default);
+      color: var(--admin-text-primary);
+      padding: 6px 14px;
+      border-radius: var(--admin-radius-full);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: var(--admin-shadow-sm);
+      transition: all 0.15s ease-in-out;
+
+      &:hover {
+        background-color: var(--admin-bg-hover);
+        border-color: var(--admin-border-focus);
+        transform: translateY(-1px);
+        box-shadow: var(--admin-shadow-md);
+      }
     }
     .auth-card {
       background: var(--admin-bg-surface);
@@ -133,6 +177,7 @@ import { AdminRoleType } from '@nukkadnow/admin-access-control';
   `],
 })
 export class LoginPageComponent {
+  readonly themeService = inject(AdminThemeService);
   private readonly sessionService = inject(AdminSessionService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);

@@ -1,4 +1,88 @@
-:root {
+/* ==========================================================================
+   NukkadNow Enterprise Admin Design Tokens
+   Supports both White (Light) Mode and Dark Modern Mode with seamless toggling
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Light (White) Mode - Crisp, Clean, High Contrast Enterprise SaaS (Default)
+   -------------------------------------------------------------------------- */
+:root,
+[data-theme="light"],
+.theme-light,
+.admin-theme-light {
+  /* Canvas & Surface Geometry */
+  --admin-bg-canvas: #f8fafc;        /* Soft slate 50 background */
+  --admin-bg-surface: #ffffff;       /* Pure crisp white for cards, panels & tables */
+  --admin-bg-subtle: #f1f5f9;        /* Slate 100 for table heads, search, chips */
+  --admin-bg-card: #ffffff;
+  --admin-bg-elevated: #ffffff;
+  --admin-bg-hover: #e2e8f0;         /* Slate 200 for hover highlights */
+
+  /* Borders & Dividers */
+  --admin-border-subtle: #e2e8f0;    /* Slate 200 */
+  --admin-border-default: #cbd5e1;   /* Slate 300 */
+  --admin-border-strong: #94a3b8;    /* Slate 400 */
+  --admin-border-focus: #2563eb;     /* Royal Blue focus */
+
+  /* Typography Colors */
+  --admin-text-primary: #0f172a;     /* Slate 900 - Deep charcoal black */
+  --admin-text-secondary: #475569;   /* Slate 600 - Readable neutral */
+  --admin-text-muted: #64748b;       /* Slate 500 - De-emphasized hints */
+  --admin-text-inverse: #ffffff;
+
+  /* Primary Accent & Brand */
+  --admin-primary: #2563eb;          /* Blue 600 */
+  --admin-primary-hover: #1d4ed8;    /* Blue 700 */
+  --admin-primary-light: rgba(37, 99, 235, 0.08);
+
+  /* Status Colors (Optimized for light backgrounds) */
+  --admin-success: #16a34a;          /* Green 600 */
+  --admin-success-subtle: #ecfdf5;   /* Green 50 */
+  --admin-warning: #d97706;          /* Amber 600 */
+  --admin-warning-subtle: #fffbeb;   /* Amber 50 */
+  --admin-danger: #dc2626;           /* Red 600 */
+  --admin-danger-subtle: #fef2f2;    /* Red 50 */
+  --admin-info: #0284c7;             /* Sky 600 */
+  --admin-info-subtle: #f0f9ff;      /* Sky 50 */
+  --admin-purple: #7c3aed;           /* Violet 600 */
+  --admin-purple-subtle: #f5f3ff;    /* Violet 50 */
+
+  /* Security & Audit Level Colors */
+  --admin-security-elevated: #e11d48;
+  --admin-security-mfa: #0284c7;
+
+  /* Shadows & Elevation (Soft, modern, crisp multi-layered shadows) */
+  --admin-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+  --admin-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --admin-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+  --admin-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+
+  /* Spacing */
+  --admin-space-xs: 4px;
+  --admin-space-sm: 8px;
+  --admin-space-md: 16px;
+  --admin-space-lg: 24px;
+  --admin-space-xl: 32px;
+  --admin-space-2xl: 48px;
+
+  /* Radii */
+  --admin-radius-sm: 6px;
+  --admin-radius-md: 10px;
+  --admin-radius-lg: 14px;
+  --admin-radius-full: 9999px;
+
+  /* Layout Dimensions */
+  --admin-sidebar-width: 260px;
+  --admin-sidebar-collapsed-width: 72px;
+  --admin-topbar-height: 64px;
+}
+
+/* --------------------------------------------------------------------------
+   Dark Mode - Sleek Administrative Obsidian / Dark Slate
+   -------------------------------------------------------------------------- */
+[data-theme="dark"],
+.theme-dark,
+.admin-theme-dark {
   /* Color Palette - Administrative Dark Modern Theme */
   --admin-bg-canvas: #090d16;
   --admin-bg-surface: #0f172a;
@@ -45,23 +129,4 @@
   --admin-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
   --admin-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
   --admin-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
-
-  /* Spacing */
-  --admin-space-xs: 4px;
-  --admin-space-sm: 8px;
-  --admin-space-md: 16px;
-  --admin-space-lg: 24px;
-  --admin-space-xl: 32px;
-  --admin-space-2xl: 48px;
-
-  /* Radii */
-  --admin-radius-sm: 4px;
-  --admin-radius-md: 8px;
-  --admin-radius-lg: 12px;
-  --admin-radius-full: 9999px;
-
-  /* Layout Dimensions */
-  --admin-sidebar-width: 260px;
-  --admin-sidebar-collapsed-width: 72px;
-  --admin-topbar-height: 64px;
 }

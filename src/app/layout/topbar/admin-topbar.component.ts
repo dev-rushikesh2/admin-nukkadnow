@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AdminSessionService } from '../../core/auth/session.service';
 import { StepUpAuthService } from '../../core/auth/step-up-auth.service';
+import { AdminThemeService } from '../../core/theme/theme.service';
 
 @Component({
   selector: 'admin-topbar',
@@ -12,7 +13,7 @@ import { StepUpAuthService } from '../../core/auth/step-up-auth.service';
   template: `
     <header class="admin-topbar">
       <div class="topbar-left">
-        <button type="button" class="sidebar-toggle-btn" (click)="toggleSidebar.emit()">
+        <button type="button" class="sidebar-toggle-btn" (click)="toggleSidebar.emit()" title="Toggle Sidebar">
           ☰
         </button>
 
@@ -34,6 +35,22 @@ import { StepUpAuthService } from '../../core/auth/step-up-auth.service';
         <div class="env-pill">
           <span>NAGPUR PILOT</span>
         </div>
+
+        <!-- Light / Dark Mode Toggle Button -->
+        <button
+          type="button"
+          class="theme-toggle-btn"
+          [attr.aria-label]="themeService.currentTheme() === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
+          [title]="themeService.currentTheme() === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
+          (click)="themeService.toggleTheme()">
+          @if (themeService.currentTheme() === 'dark') {
+            <span class="theme-icon">☀️</span>
+            <span class="theme-label">Light Mode</span>
+          } @else {
+            <span class="theme-icon">🌙</span>
+            <span class="theme-label">Dark Mode</span>
+          }
+        </button>
 
         <div class="operator-profile">
           <div class="operator-info">
@@ -72,6 +89,8 @@ import { StepUpAuthService } from '../../core/auth/step-up-auth.service';
       position: sticky;
       top: 0;
       z-index: var(--z-index-sticky);
+      box-shadow: var(--admin-shadow-sm);
+      transition: background-color 0.2s ease, border-color 0.2s ease;
     }
     .topbar-left, .topbar-right {
       display: flex;
@@ -85,7 +104,16 @@ import { StepUpAuthService } from '../../core/auth/step-up-auth.service';
       font-size: 1.25rem;
       cursor: pointer;
       padding: 6px;
-      &:hover { color: var(--admin-text-primary); }
+      border-radius: var(--admin-radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.15s ease, color 0.15s ease;
+
+      &:hover {
+        background-color: var(--admin-bg-hover);
+        color: var(--admin-text-primary);
+      }
     }
     .command-search-trigger {
       display: flex;
@@ -103,6 +131,7 @@ import { StepUpAuthService } from '../../core/auth/step-up-auth.service';
       &:hover {
         border-color: var(--admin-border-focus);
         color: var(--admin-text-secondary);
+        background-color: var(--admin-bg-hover);
       }
     }
     .search-shortcut {
@@ -111,6 +140,7 @@ import { StepUpAuthService } from '../../core/auth/step-up-auth.service';
       border-radius: 3px;
       padding: 1px 5px;
       font-size: 0.7rem;
+      color: var(--admin-text-secondary);
     }
     .security-indicator {
       display: inline-flex;
@@ -122,9 +152,9 @@ import { StepUpAuthService } from '../../core/auth/step-up-auth.service';
       font-weight: 600;
 
       &.elevated {
-        background-color: rgba(244, 63, 94, 0.15);
-        color: #f43f5e;
-        border: 1px solid rgba(244, 63, 94, 0.3);
+        background-color: rgba(244, 63, 94, 0.12);
+        color: #e11d48;
+        border: 1px solid rgba(244, 63, 94, 0.25);
       }
     }
     .indicator-dot {
@@ -137,11 +167,39 @@ import { StepUpAuthService } from '../../core/auth/step-up-auth.service';
       background-color: var(--admin-bg-subtle);
       color: var(--admin-text-secondary);
       border: 1px solid var(--admin-border-default);
-      padding: 3px 8px;
-      border-radius: var(--admin-radius-sm);
+      padding: 4px 10px;
+      border-radius: var(--admin-radius-full);
       font-size: 0.7rem;
-      font-weight: 600;
+      font-weight: 700;
       letter-spacing: 0.05em;
+    }
+    .theme-toggle-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background-color: var(--admin-bg-subtle);
+      border: 1px solid var(--admin-border-default);
+      color: var(--admin-text-primary);
+      padding: 5px 12px;
+      border-radius: var(--admin-radius-full);
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease-in-out;
+
+      &:hover {
+        background-color: var(--admin-bg-hover);
+        border-color: var(--admin-border-focus);
+        transform: translateY(-1px);
+        box-shadow: var(--admin-shadow-sm);
+      }
+
+      .theme-icon {
+        font-size: 0.875rem;
+      }
+      .theme-label {
+        font-size: 0.75rem;
+      }
     }
     .operator-profile {
       display: flex;
@@ -172,6 +230,9 @@ import { StepUpAuthService } from '../../core/auth/step-up-auth.service';
       font-size: 1.1rem;
       padding: 6px;
       border-radius: var(--admin-radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
       transition: all 0.15s ease;
 
       &:hover {
@@ -187,6 +248,7 @@ import { StepUpAuthService } from '../../core/auth/step-up-auth.service';
 export class AdminTopbarComponent {
   readonly sessionService = inject(AdminSessionService);
   readonly stepUpService = inject(StepUpAuthService);
+  readonly themeService = inject(AdminThemeService);
   private readonly router = inject(Router);
 
   @Output() toggleSidebar = new EventEmitter<void>();

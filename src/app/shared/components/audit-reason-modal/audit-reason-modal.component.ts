@@ -65,7 +65,7 @@ import { AuditReasonDialogService } from '../../../core/audit-context/audit-reas
       left: 0;
       width: 100vw;
       height: 100vh;
-      background: rgba(0, 0, 0, 0.8);
+      background: rgba(15, 23, 42, 0.55);
       backdrop-filter: blur(4px);
       display: flex;
       align-items: center;

@@ -57,7 +57,7 @@ interface CommandItem {
   styles: [`
     .command-palette-backdrop {
       position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-      background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(4px);
+      background: rgba(15, 23, 42, 0.55); backdrop-filter: blur(4px);
       display: flex; align-items: flex-start; justify-content: center;
       padding-top: 15vh; z-index: var(--z-index-popover);
     }

@@ -176,7 +176,7 @@ import { AuditReasonDialogService } from '../../../core/audit-context/audit-reas
     }
     .doc-viewer-box {
       border: 1px solid var(--admin-border-default); border-radius: var(--admin-radius-sm);
-      overflow: hidden; background: #060911;
+      overflow: hidden; background: var(--admin-bg-canvas);
     }
     .doc-meta-bar {
       display: flex; justify-content: space-between; align-items: center; padding: 10px 14px;
@@ -184,16 +184,16 @@ import { AuditReasonDialogService } from '../../../core/audit-context/audit-reas
     }
     .doc-preview-area { padding: 24px; display: flex; justify-content: center; }
     .mock-cert-box {
-      background: #111827; border: 2px dashed #374151; border-radius: 8px;
-      padding: 24px; width: 100%; max-width: 480px; text-align: center;
-      .cert-header { font-size: 0.7rem; color: #9ca3af; letter-spacing: 0.1em; }
-      .cert-title { font-size: 1.1rem; font-weight: bold; margin: 12px 0; color: #f3f4f6; }
-      .cert-body { font-size: 0.8rem; line-height: 1.8; color: #d1d5db; text-align: left; }
+      background: var(--admin-bg-surface); border: 2px dashed var(--admin-border-strong); border-radius: var(--admin-radius-md);
+      padding: 24px; width: 100%; max-width: 480px; text-align: center; box-shadow: var(--admin-shadow-sm);
+      .cert-header { font-size: 0.7rem; color: var(--admin-text-muted); letter-spacing: 0.1em; }
+      .cert-title { font-size: 1.1rem; font-weight: bold; margin: 12px 0; color: var(--admin-text-primary); }
+      .cert-body { font-size: 0.8rem; line-height: 1.8; color: var(--admin-text-secondary); text-align: left; }
       .cert-stamp { text-align: center; margin-top: 16px; color: var(--admin-success); font-weight: bold; }
     }
     .doc-note-box {
-      padding: 10px 14px; background: rgba(59, 130, 246, 0.1); border-top: 1px solid rgba(59, 130, 246, 0.2);
-      font-size: 0.75rem; color: #93c5fd;
+      padding: 10px 14px; background: var(--admin-primary-light); border-top: 1px solid var(--admin-border-subtle);
+      font-size: 0.75rem; color: var(--admin-primary);
     }
     .penny-drop-card {
       background: var(--admin-bg-subtle); border: 1px solid var(--admin-border-default);

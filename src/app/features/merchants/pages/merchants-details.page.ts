@@ -160,7 +160,7 @@ import { AdminPermission, AdminPermissions } from '@nukkadnow/admin-access-contr
     .suspension-alert-banner {
       background: var(--admin-danger-subtle);
       border: 1px solid rgba(239, 68, 68, 0.4);
-      color: #fca5a5;
+      color: var(--admin-danger);
       padding: 14px 18px;
       border-radius: var(--admin-radius-md);
       display: flex;

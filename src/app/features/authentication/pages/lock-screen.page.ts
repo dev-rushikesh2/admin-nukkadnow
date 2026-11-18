@@ -52,7 +52,7 @@ import { AdminSessionService } from '../../../core/auth/session.service';
       display: flex;
       align-items: center;
       justify-content: center;
-      background: radial-gradient(circle at 50% 30%, #1e293b 0%, #090d16 100%);
+      background: radial-gradient(circle at 50% 30%, var(--admin-bg-subtle) 0%, var(--admin-bg-canvas) 100%);
       padding: 16px;
     }
     .lock-card {

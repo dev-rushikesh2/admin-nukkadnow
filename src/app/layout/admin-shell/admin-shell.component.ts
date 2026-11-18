@@ -8,6 +8,7 @@ import { AuditReasonModalComponent } from '../../shared/components/audit-reason-
 import { IdleTimeoutService } from '../../core/auth/idle-timeout.service';
 import { AdminRealtimeService } from '../../core/realtime/admin-realtime.service';
 import { SystemAlertsService } from '../../core/realtime/system-alerts.service';
+import { AdminThemeService } from '../../core/theme/theme.service';
 
 @Component({
   selector: 'admin-shell',
@@ -25,6 +26,7 @@ import { SystemAlertsService } from '../../core/realtime/system-alerts.service';
 })
 export class AdminShellComponent implements OnInit, OnDestroy {
   readonly idleService = inject(IdleTimeoutService);
+  readonly themeService = inject(AdminThemeService);
   private readonly realtime = inject(AdminRealtimeService);
   private readonly alertsService = inject(SystemAlertsService);
 

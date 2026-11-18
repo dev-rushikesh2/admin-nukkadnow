@@ -64,7 +64,7 @@ import { AdminRoleType, ADMIN_ROLE_MATRIX } from '@nukkadnow/admin-access-contro
       display: flex;
       align-items: center;
       justify-content: center;
-      background: radial-gradient(circle at 50% 20%, #1e293b 0%, #090d16 100%);
+      background: radial-gradient(circle at 50% 20%, var(--admin-bg-subtle) 0%, var(--admin-bg-canvas) 100%);
       padding: 16px;
     }
     .auth-card {
