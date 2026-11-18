@@ -76,4 +76,7 @@ export const AdminEndpoints = {
   SYSTEM_HEALTH: '/platform/health',
   PLATFORM_USERS: '/platform/users',
   PLATFORM_ROLES: '/platform/roles',
+  PLATFORM_PERMISSIONS: '/platform/permissions',
+  PLATFORM_CITIES: '/platform/cities',
+  AUTH_SWITCH_ROLE: '/auth/switch-role',
 } as const;

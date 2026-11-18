@@ -1,19 +1,400 @@
-<div class="roles-permissions-page-container">
-  <admin-page-header
-    title="Roles & RBAC Matrix"
-    subtitle="Granular administrative permission policies, role definitions and privilege elevation rules"
-    breadcrumb="Console / Roles & RBAC Matrix">
-    <div actions>
-      <button class="admin-btn btn-secondary btn-sm" (click)="refresh()">↻ Refresh</button>
-      <button class="admin-btn btn-primary btn-sm" (click)="exportRecords()">Export CSV</button>
-    </div>
-  </admin-page-header>
+<div class="roles-page-container">
+  <!-- Toast Notification -->
+  @if (toastMessage()) {
+    <aside class="admin-toast" role="alert">
+      <span>{{ toastMessage() }}</span>
+    </aside>
+  }
 
-  <admin-data-table
-    [columns]="tableColumns"
-    [data]="store.items()"
-    [totalCount]="store.totalCount()"
-    [loading]="store.loading()"
-    (rowClick)="onRowClick($event)">
-  </admin-data-table>
+  <!-- Header -->
+  <header class="page-header">
+    <div class="header-titles">
+      <div class="breadcrumb-row">Console / Access Control / Roles & Permissions</div>
+      <h1 class="page-title">Platform Roles & Hierarchy Matrix</h1>
+      <p class="page-subtitle">
+        Dynamic database-backed 4-tier administrative hierarchy with granular permission scoping, micro-market city assignments, and custom role provisioning.
+      </p>
+    </div>
+
+    <div class="header-actions">
+      <button type="button" class="admin-btn btn-secondary" (click)="loadRoles()">
+        ↻ Refresh
+      </button>
+      <button type="button" class="admin-btn btn-primary" (click)="openCreateModal()">
+        + Create Dynamic Role
+      </button>
+    </div>
+  </header>
+
+  <!-- 4 Hierarchy Levels Overview Cards -->
+  <section class="hierarchy-cards-grid" aria-label="Administrative Hierarchy Levels">
+    <div class="hierarchy-card level-root">
+      <div class="card-top-tag">
+        <span class="level-indicator">Level 1</span>
+        <span class="protection-pill">Protected Account</span>
+      </div>
+      <strong class="role-name">Root Admin</strong>
+      <span class="role-scope-title">Ultimate Platform Authority</span>
+      <p class="role-desc">
+        Company owner · Complete platform control. Sovereign access across all modules, configuration switches, and system secrets. Cannot be created or altered via UI.
+      </p>
+      <div class="role-card-footer">
+        <span class="role-rule">🛡️ Zero Promotion Allowed</span>
+      </div>
+    </div>
+
+    <div class="hierarchy-card level-super">
+      <div class="card-top-tag">
+        <span class="level-indicator">Level 2</span>
+        <span class="scope-pill">Central Platform</span>
+      </div>
+      <strong class="role-name">Super Admin</strong>
+      <span class="role-scope-title">Central Platform Operations</span>
+      <p class="role-desc">
+        Operational management across all cities. Supervise assigned staff, configure regional feature flags, approve sensitive merchant payouts and refund escalations.
+      </p>
+      <div class="role-card-footer">
+        <span class="role-rule">👥 Supervises City Managers & Staff</span>
+      </div>
+    </div>
+
+    <div class="hierarchy-card level-city">
+      <div class="card-top-tag">
+        <span class="level-indicator">Level 3</span>
+        <span class="geo-pill">City Scoped</span>
+      </div>
+      <strong class="role-name">City Operations Manager</strong>
+      <span class="role-scope-title">Assigned City Operations</span>
+      <p class="role-desc">
+        Bound to assigned city (e.g. Pune, Nagpur). Supervises city verification & support personnel. Monitors merchant applications and live city deliveries.
+      </p>
+      <div class="role-card-footer">
+        <span class="role-rule">📍 Restricted to Assigned City & Localities</span>
+      </div>
+    </div>
+
+    <div class="hierarchy-card level-staff">
+      <div class="card-top-tag">
+        <span class="level-indicator">Level 4</span>
+        <span class="staff-pill">Specialized Queues</span>
+      </div>
+      <strong class="role-name">Staff: Verification & Support</strong>
+      <span class="role-scope-title">Frontline Operations</span>
+      <p class="role-desc">
+        Specialized functional queues: <strong>Verification Staff</strong> processes statutory FSSAI/GSTIN KYC; <strong>Support Staff</strong> assists customers and merchants with audited PII unmasking.
+      </p>
+      <div class="role-card-footer">
+        <span class="role-rule">📑 Document KYC & Customer Triage</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Dynamic Roles Registry Section -->
+  <section class="section-card">
+    <div class="section-header">
+      <div>
+        <h2 class="section-title">Database-Backed Roles Catalog</h2>
+        <p class="section-subtitle">Real-time roles stored in database with dynamic permission mappings and assigned user counts.</p>
+      </div>
+
+      <div class="search-filter-box">
+        <input 
+          type="text" 
+          class="admin-search-input" 
+          placeholder="Filter roles by code, title, or description..." 
+          [ngModel]="searchQuery()" 
+          (ngModelChange)="searchQuery.set($event)" />
+      </div>
+    </div>
+
+    @if (isLoading()) {
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <span>Loading dynamic roles from database...</span>
+      </div>
+    } @else {
+      <div class="table-container">
+        <table class="roles-table">
+          <thead>
+            <tr>
+              <th>Role Identifier</th>
+              <th>Hierarchy Level</th>
+              <th>Description</th>
+              <th>Security Policy</th>
+              <th>Assigned Users</th>
+              <th>Type</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (role of filteredRoles(); track role.id) {
+              <tr class="role-row">
+                <td>
+                  <div class="role-identity">
+                    <strong class="role-title-text">{{ role.title }}</strong>
+                    <code class="role-code-tag">{{ role.code }}</code>
+                  </div>
+                </td>
+                <td>
+                  <span class="hierarchy-badge" [ngClass]="getHierarchyBadge(role.hierarchyLevel).class">
+                    {{ getHierarchyBadge(role.hierarchyLevel).label }}
+                  </span>
+                </td>
+                <td class="role-desc-cell">
+                  <span class="desc-clamp" [title]="role.description">{{ role.description }}</span>
+                </td>
+                <td>
+                  <div class="security-pills">
+                    @if (role.requiresMfa) {
+                      <span class="mfa-badge">🔐 MFA Enforced</span>
+                    } @else {
+                      <span class="mfa-opt-badge">Optional MFA</span>
+                    }
+                  </div>
+                </td>
+                <td>
+                  <span class="user-count-pill">{{ role.userCount }} Operators</span>
+                </td>
+                <td>
+                  @if (role.isSystem) {
+                    <span class="system-badge">System Core</span>
+                  } @else {
+                    <span class="custom-badge">Dynamic Custom</span>
+                  }
+                </td>
+                <td>
+                  <div class="row-actions">
+                    <button type="button" class="btn-action view-btn" (click)="inspectRole(role)" title="View Permissions">
+                      Inspect ({{ role.permissions.length }})
+                    </button>
+                    @if (!role.isSystem && role.code !== 'ROOT_ADMIN') {
+                      <button type="button" class="btn-action del-btn" (click)="deleteRole(role)" title="Delete Custom Role">
+                        Delete
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+
+  <!-- Complete Module Responsibilities Matrix (Table 1 from NukkadNow Spec) -->
+  <section class="section-card">
+    <div class="section-header">
+      <div>
+        <h2 class="section-title">Module Responsibilities & Scopes Matrix</h2>
+        <p class="section-subtitle">
+          Standard operational governance rules across the 4 administrative levels (Full access respects sensitive-data controls, dual approval, and immutable audit logging).
+        </p>
+      </div>
+      <span class="matrix-pill">Authoritative Governance Policy</span>
+    </div>
+
+    <div class="table-container">
+      <table class="matrix-table">
+        <thead>
+          <tr>
+            <th class="mod-col">Module</th>
+            <th>Root Admin</th>
+            <th>Super Admin</th>
+            <th>City Operations Manager</th>
+            <th>Verification & Support Staff</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of responsibilitiesMatrix; track row.module) {
+            <tr>
+              <td class="module-name-cell">
+                <strong>{{ row.module }}</strong>
+              </td>
+              <td class="scope-cell full-authority">
+                <span class="auth-pill full">Full</span>
+              </td>
+              <td class="scope-cell">
+                <span class="auth-pill" [class.full]="row.superAdmin === 'Full'" [class.partial]="row.superAdmin !== 'Full'">
+                  {{ row.superAdmin }}
+                </span>
+              </td>
+              <td class="scope-cell">
+                <span class="auth-pill" [class.full]="row.cityManager === 'Full'" [class.city]="row.cityManager.includes('City') || row.cityManager.includes('Assigned')" [class.disabled]="row.cityManager === 'No'">
+                  {{ row.cityManager }}
+                </span>
+              </td>
+              <td class="scope-cell">
+                <span class="auth-pill" [class.disabled]="row.staff === 'No' || row.staff.includes('No direct')" [class.staff]="row.staff !== 'No' && !row.staff.includes('No direct')">
+                  {{ row.staff }}
+                </span>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Modal: Create Dynamic Role in Database -->
+  @if (isCreateModalOpen()) {
+    <div class="modal-backdrop" (click)="closeCreateModal()">
+      <div class="modal-container" (click)="$event.stopPropagation()">
+        <header class="modal-header">
+          <div>
+            <h3 class="modal-title">+ Create Dynamic Role in Database</h3>
+            <p class="modal-subtitle">Define a new operational role with custom permissions and hierarchy level.</p>
+          </div>
+          <button type="button" class="btn-close-modal" (click)="closeCreateModal()">×</button>
+        </header>
+
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Role Code (Uppercase Identifier)*</label>
+              <input 
+                type="text" 
+                class="form-input" 
+                placeholder="e.g. AREA_INVENTORY_AUDITOR" 
+                [ngModel]="newRoleCode()" 
+                (ngModelChange)="newRoleCode.set($event)" />
+              <span class="form-hint">Machine-readable key used for RBAC checks (e.g. NIGHT_DISPATCH_SUPERVISOR).</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Role Display Title*</label>
+              <input 
+                type="text" 
+                class="form-input" 
+                placeholder="e.g. Area Inventory Auditor" 
+                [ngModel]="newRoleTitle()" 
+                (ngModelChange)="newRoleTitle.set($event)" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Hierarchy Level Tier*</label>
+              <select 
+                class="form-input" 
+                [ngModel]="newHierarchyLevel()" 
+                (ngModelChange)="newHierarchyLevel.set(+$event)">
+                <option [value]="2">Level 2: Super Admin Operations Tier</option>
+                <option [value]="3">Level 3: City Operations Manager Tier</option>
+                <option [value]="4">Level 4: Operational Staff Tier</option>
+                <option [value]="5">Level 5: Custom Specialist</option>
+              </select>
+              <span class="form-hint">Note: Root Admin (Level 1) is protected and cannot be selected.</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">MFA Security Policy</label>
+              <label class="checkbox-label">
+                <input 
+                  type="checkbox" 
+                  [ngModel]="newRequiresMfa()" 
+                  (ngModelChange)="newRequiresMfa.set($event)" />
+                <span>Require Multi-Factor Authentication (TOTP / SMS OTP) on login</span>
+              </label>
+            </div>
+
+            <div class="form-group full-col">
+              <label class="form-label">Role Description</label>
+              <textarea 
+                class="form-input form-textarea" 
+                rows="2" 
+                placeholder="Describe operational responsibilities and scope of this role..."
+                [ngModel]="newRoleDescription()" 
+                (ngModelChange)="newRoleDescription.set($event)"></textarea>
+            </div>
+          </div>
+
+          <!-- Permissions Checklist -->
+          <div class="permissions-builder-section">
+            <div class="perm-head">
+              <strong class="perm-title">Assigned Granular Permissions ({{ selectedPermissions().length }} Selected)</strong>
+              <span class="perm-subtitle">Select exact capabilities permitted for this dynamic role.</span>
+            </div>
+
+            <div class="modules-accordion">
+              @for (mod of getModuleCategories(); track mod) {
+                <div class="module-perm-block">
+                  <div class="module-perm-head">
+                    <span class="module-badge">{{ mod }}</span>
+                    <span class="module-count">{{ permissionsCatalog()[mod].length }} Capabilities</span>
+                  </div>
+
+                  <div class="permissions-chips-grid">
+                    @for (perm of permissionsCatalog()[mod]; track perm.code) {
+                      <button 
+                        type="button" 
+                        class="perm-chip-btn" 
+                        [class.active]="isPermissionSelected(perm.code)"
+                        (click)="togglePermission(perm.code)">
+                        <span class="chip-status">{{ isPermissionSelected(perm.code) ? '✓' : '+' }}</span>
+                        <span class="chip-title">{{ perm.title }}</span>
+                        <code class="chip-code">{{ perm.code }}</code>
+                      </button>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+
+        <footer class="modal-footer">
+          <button type="button" class="admin-btn btn-secondary" (click)="closeCreateModal()">
+            Cancel
+          </button>
+          <button 
+            type="button" 
+            class="admin-btn btn-primary" 
+            [disabled]="isSubmitting()" 
+            (click)="submitCreateRole()">
+            {{ isSubmitting() ? 'Persisting to Database...' : 'Save & Provision Role' }}
+          </button>
+        </footer>
+      </div>
+    </div>
+  }
+
+  <!-- Modal: Inspect Role Permissions -->
+  @if (inspectingRole()) {
+    <div class="modal-backdrop" (click)="closeInspectModal()">
+      <div class="modal-container inspect-modal" (click)="$event.stopPropagation()">
+        <header class="modal-header">
+          <div>
+            <div class="badge-row">
+              <span class="hierarchy-badge" [ngClass]="getHierarchyBadge(inspectingRole()!.hierarchyLevel).class">
+                {{ getHierarchyBadge(inspectingRole()!.hierarchyLevel).label }}
+              </span>
+              @if (inspectingRole()!.isSystem) {
+                <span class="system-badge">System Core</span>
+              }
+            </div>
+            <h3 class="modal-title">{{ inspectingRole()!.title }}</h3>
+            <code class="role-code-tag">{{ inspectingRole()!.code }}</code>
+          </div>
+          <button type="button" class="btn-close-modal" (click)="closeInspectModal()">×</button>
+        </header>
+
+        <div class="modal-body">
+          <p class="inspect-desc">{{ inspectingRole()!.description }}</p>
+
+          <strong class="inspect-perm-title">Granted Capabilities ({{ inspectingRole()!.permissions.length }}):</strong>
+          <div class="inspect-permissions-list">
+            @for (perm of inspectingRole()!.permissions; track perm) {
+              <div class="inspect-perm-item">
+                <span class="check-icon">✓</span>
+                <code>{{ perm }}</code>
+              </div>
+            }
+          </div>
+        </div>
+
+        <footer class="modal-footer">
+          <button type="button" class="admin-btn btn-secondary" (click)="closeInspectModal()">Close</button>
+        </footer>
+      </div>
+    </div>
+  }
 </div>
