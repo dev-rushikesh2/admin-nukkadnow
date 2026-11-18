@@ -274,7 +274,20 @@ Integrated authoritative governance matrix across all 11 core modules:
 - Added account suspension/activation actions with Root Admin safeguards.
 
 #### 6. Topbar Hierarchy Role Simulator & Dynamic Navigation Filtering
-- Added **Hierarchy Role Simulator** selector in `admin-topbar.component.ts` allowing immediate live switching between `ROOT_ADMIN`, `SUPER_ADMIN`, `CITY_OPERATIONS_MANAGER (Pune)`, `CITY_OPERATIONS_MANAGER (Nagpur)`, `VERIFICATION_STAFF`, and `SUPPORT_STAFF`.
-- Added dynamic geographic scope pill (`[📍 Pune]`, `[📍 Nagpur]`, `[🌐 Global Scope]`) in topbar.
+- Added **Hierarchy Role Simulator** selector in `admin-topbar.component.ts` allowing immediate live switching between:
+  - `ROOT_ADMIN` (Level 1: Founder & Owner · Global Scope)
+  - `SUPER_ADMIN` (Level 2: Central Platform · Global Scope)
+  - `CITY_PUNE` (Level 3: Pune City Operations Lead)
+  - `CITY_NAGPUR` (Level 3: Nagpur City Operations Lead)
+  - `CITY_AKOLA` (Level 3: Akola City Operations Lead)
+  - `CITY_AMRAVATI` (Level 3: Amravati City Operations Lead)
+  - `VERIFICATION_STAFF` (Level 4: Merchant KYC Queue Specialist)
+  - `SUPPORT_STAFF` (Level 4: Customer & Merchant Support Specialist)
+- Added dynamic geographic scope pill (`[📍 Akola]`, `[📍 Amravati]`, `[📍 Pune]`, `[📍 Nagpur]`, `[🌐 Global Scope]`) in topbar.
+- Updated `adminAuthInterceptor` to automatically inject `x-operator-role`, `x-operator-city`, and `x-operator-city-id` on all outgoing requests.
+- Updated `MerchantsListPageComponent` with `City / Locality` column formatting.
 - Updated `admin-sidebar.component.ts` to automatically filter navigation items in real-time according to the active operator's dynamic permissions.
+
+#### 7. Build Verification
+- `pnpm run build:prod` verified clean production bundle compilation with 0 errors and 0 warnings.
 

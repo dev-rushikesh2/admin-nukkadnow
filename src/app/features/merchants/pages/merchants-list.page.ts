@@ -32,7 +32,7 @@ export class MerchantsListPageComponent implements OnInit {
   readonly tableColumns: TableColumn<MerchantViewModel>[] = [
     { key: 'id', header: 'Merchant ID', width: '150px', sortable: true },
     { key: 'name', header: 'Business Name', sortable: true },
-    { key: 'locality', header: 'Locality (Nagpur)', width: '140px', sortable: true },
+    { key: 'locality', header: 'City / Locality', width: '150px', sortable: true },
     { key: 'mode', header: 'Seller Mode', width: '140px', sortable: true },
     { key: 'status', header: 'Lifecycle Status', width: '150px', sortable: true },
     { key: 'outletsCount', header: 'Outlets', width: '90px', align: 'center', sortable: true },

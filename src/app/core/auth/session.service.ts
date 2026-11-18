@@ -96,8 +96,19 @@ export class AdminSessionService {
       name = 'Rushi Platform Architect';
       email = 'admin@nukkadnow.com';
     } else if (role === AdminRole.CITY_OPERATIONS_MANAGER) {
-      name = geoAssignment?.cityName === 'Pune' ? 'Sneha Kulkarni (Pune Lead)' : 'Amit Deshpande (Nagpur Lead)';
-      email = geoAssignment?.cityName === 'Pune' ? 'pune.ops@nukkadnow.com' : 'nagpur.ops@nukkadnow.com';
+      if (geoAssignment?.cityName === 'Pune') {
+        name = 'Sneha Kulkarni (Pune Lead)';
+        email = 'pune.ops@nukkadnow.com';
+      } else if (geoAssignment?.cityName === 'Akola') {
+        name = 'Rajesh Sharma (Akola Lead)';
+        email = 'akola.ops@nukkadnow.com';
+      } else if (geoAssignment?.cityName === 'Amravati') {
+        name = 'Pooja Deshmukh (Amravati Lead)';
+        email = 'amravati.ops@nukkadnow.com';
+      } else {
+        name = 'Amit Deshpande (Nagpur Lead)';
+        email = 'nagpur.ops@nukkadnow.com';
+      }
     } else if (role === AdminRole.VERIFICATION_STAFF) {
       name = 'Sunita Compliance Officer';
       email = 'sunita.kyc@nukkadnow.com';

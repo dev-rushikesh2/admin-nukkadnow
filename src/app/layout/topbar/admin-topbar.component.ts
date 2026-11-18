@@ -38,6 +38,8 @@ import { AdminRole, AdminGeoAssignment } from '@nukkadnow/admin-access-control';
             <option value="SUPER_ADMIN">⚡ Level 2: Super Admin (Central Platform)</option>
             <option value="CITY_PUNE">📍 Level 3: City Manager (Pune Operations)</option>
             <option value="CITY_NAGPUR">📍 Level 3: City Manager (Nagpur Operations)</option>
+            <option value="CITY_AKOLA">📍 Level 3: City Manager (Akola Operations)</option>
+            <option value="CITY_AMRAVATI">📍 Level 3: City Manager (Amravati Operations)</option>
             <option value="VERIFICATION_STAFF">📑 Level 4: Verification Staff (KYC Queue)</option>
             <option value="SUPPORT_STAFF">🎧 Level 4: Support Staff (Customer & Merchant)</option>
           </select>
@@ -353,7 +355,10 @@ export class AdminTopbarComponent {
     const role = this.sessionService.currentRole();
     const geo = this.sessionService.geoAssignment();
     if (role === AdminRole.CITY_OPERATIONS_MANAGER) {
-      return geo?.cityName === 'Pune' ? 'CITY_PUNE' : 'CITY_NAGPUR';
+      if (geo?.cityName === 'Pune') return 'CITY_PUNE';
+      if (geo?.cityName === 'Akola') return 'CITY_AKOLA';
+      if (geo?.cityName === 'Amravati') return 'CITY_AMRAVATI';
+      return 'CITY_NAGPUR';
     }
     return role || 'SUPER_ADMIN';
   }
@@ -381,6 +386,24 @@ export class AdminTopbarComponent {
         localities: ['Sitabuldi', 'Dharampeth', 'Sadar', 'Ramdaspeth', 'Mahal', 'Wardha Road'],
       };
       this.sessionService.switchRole(AdminRole.CITY_OPERATIONS_MANAGER, nagpurGeo);
+    } else if (val === 'CITY_AKOLA') {
+      const akolaGeo: AdminGeoAssignment = {
+        state: 'Maharashtra',
+        district: 'Akola',
+        cityId: 'city-akl-01',
+        cityName: 'Akola',
+        localities: ['Gandhi Chowk', 'Tilak Road', 'Civil Lines', 'Ratanlal Plot', 'Jatharpeth', 'Toshniwal Layout'],
+      };
+      this.sessionService.switchRole(AdminRole.CITY_OPERATIONS_MANAGER, akolaGeo);
+    } else if (val === 'CITY_AMRAVATI') {
+      const amravatiGeo: AdminGeoAssignment = {
+        state: 'Maharashtra',
+        district: 'Amravati',
+        cityId: 'city-amr-01',
+        cityName: 'Amravati',
+        localities: ['Rajkamal Chowk', 'Badnera Road', 'Gadge Nagar', 'Camp', 'Rukmini Nagar', 'Panchavati'],
+      };
+      this.sessionService.switchRole(AdminRole.CITY_OPERATIONS_MANAGER, amravatiGeo);
     } else if (val === 'VERIFICATION_STAFF') {
       this.sessionService.switchRole(AdminRole.VERIFICATION_STAFF);
     } else if (val === 'SUPPORT_STAFF') {
