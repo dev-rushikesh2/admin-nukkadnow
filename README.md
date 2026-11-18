@@ -273,20 +273,29 @@ Integrated authoritative governance matrix across all 11 core modules:
 - Added **Reassign Geographic Scope Modal** to update city and micro-market locality boundaries.
 - Added account suspension/activation actions with Root Admin safeguards.
 
-#### 6. Topbar Hierarchy Role Simulator & Dynamic Navigation Filtering
-- Added **Hierarchy Role Simulator** selector in `admin-topbar.component.ts` allowing immediate live switching between:
-  - `ROOT_ADMIN` (Level 1: Founder & Owner · Global Scope)
-  - `SUPER_ADMIN` (Level 2: Central Platform · Global Scope)
-  - `CITY_PUNE` (Level 3: Pune City Operations Lead)
-  - `CITY_NAGPUR` (Level 3: Nagpur City Operations Lead)
-  - `CITY_AKOLA` (Level 3: Akola City Operations Lead)
-  - `CITY_AMRAVATI` (Level 3: Amravati City Operations Lead)
-  - `VERIFICATION_STAFF` (Level 4: Merchant KYC Queue Specialist)
-  - `SUPPORT_STAFF` (Level 4: Customer & Merchant Support Specialist)
-- Added dynamic geographic scope pill (`[📍 Akola]`, `[📍 Amravati]`, `[📍 Pune]`, `[📍 Nagpur]`, `[🌐 Global Scope]`) in topbar.
-- Updated `adminAuthInterceptor` to automatically inject `x-operator-role`, `x-operator-city`, and `x-operator-city-id` on all outgoing requests.
-- Updated `MerchantsListPageComponent` with `City / Locality` column formatting.
-- Updated `admin-sidebar.component.ts` to automatically filter navigation items in real-time according to the active operator's dynamic permissions.
+#### 6. Authentic Operator Authentication & Hierarchical Provisioning (Simulation Switching Removed)
+- **Eliminated Simulation Switching:** Removed mock role dropdown from `admin-topbar.component.ts`. The UI strictly renders the authentic credentials and cryptographic permissions bound to the operator's individual session and bearer JWT.
+- **Individual Credentials & Authentication:** Every admin user has their own unique username/work-email and password credentials:
+  - `founder@nukkadnow.com` (`Root@Nukkad2026!`): Root Admin (Founder & Owner · Level 1 · Global Scope)
+  - `admin@nukkadnow.com` (`Super@Nukkad2026!`): Super Admin (Central Platform · Level 2 · Global Scope)
+  - `akola.ops@nukkadnow.com` (`Akola@Nukkad2026!`): Akola Operations Manager (Level 3 · Akola Territory)
+  - `amravati.ops@nukkadnow.com` (`Amravati@Nukkad2026!`): Amravati Operations Manager (Level 3 · Amravati Territory)
+  - `nagpur.ops@nukkadnow.com` (`Nagpur@Nukkad2026!`): Nagpur Operations Manager (Level 3 · Nagpur Territory)
+  - `pune.ops@nukkadnow.com` (`Pune@Nukkad2026!`): Pune Operations Manager (Level 3 · Pune Territory)
+  - `sunita.kyc@nukkadnow.com` (`Verify@Nukkad2026!`): Verification Staff (Level 4 · Nagpur KYC Queue)
+  - `ananya.support@nukkadnow.com` (`Support@Nukkad2026!`): Support Staff (Level 4 · Customer & Merchant Support)
+- **Unified Component Reuse with Municipal Isolation:**
+  - Identical components (`Merchants`, `Orders`, `Refunds`, `Localities`, `KYC Queue`) are reused across all admin levels.
+  - Akola shops and orders will never display in the Amravati or Pune dashboard, enforced via both the backend API Gateway (`resolveOperatorScope`) and the frontend HTTP interceptor (`adminAuthInterceptor`).
+- **Hierarchical Operator Provisioning:**
+  - Super Admin can provision City Operations Managers and Staff with custom passwords and geographic assignments; cannot provision Root Admin or Super Admin.
+  - City Operations Managers can only provision Verification Staff and Support Staff locked to their designated municipal territory.
+  - Staff users cannot provision subordinate administrators.
+- **Dual Light (White) & Dark Mode Compliance:**
+  - Production-ready, enterprise-grade high contrast design tokens in both White/Light Mode and Dark Modern Mode with seamless single-click header toggle.
+- **Login Portal & MFA Challenge:**
+  - `login.page.ts`: Connects to `POST /auth/login` with email and password, includes quick credential selector for testing all 8 standard roles, and routes to `/overview` or `/auth/mfa`.
+  - `mfa-challenge.page.ts`: Connects to `POST /auth/mfa/verify` to validate 6-digit TOTP tokens and activate individual authenticated sessions.
 
 #### 7. Build Verification
 - `pnpm run build:prod` verified clean production bundle compilation with 0 errors and 0 warnings.

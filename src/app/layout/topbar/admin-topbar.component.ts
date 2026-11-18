@@ -1,16 +1,14 @@
 import { Component, Output, EventEmitter, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AdminSessionService } from '../../core/auth/session.service';
 import { StepUpAuthService } from '../../core/auth/step-up-auth.service';
 import { AdminThemeService } from '../../core/theme/theme.service';
-import { AdminRole, AdminGeoAssignment } from '@nukkadnow/admin-access-control';
 
 @Component({
   selector: 'admin-topbar',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <header class="admin-topbar">
@@ -27,24 +25,6 @@ import { AdminRole, AdminGeoAssignment } from '@nukkadnow/admin-access-control';
       </div>
 
       <div class="topbar-right">
-        <!-- 4-Level Admin Hierarchy Simulator -->
-        <div class="role-simulator-wrap" title="Simulate session as any of the 4 Platform Hierarchy Levels">
-          <span class="sim-icon">🎭</span>
-          <select 
-            class="role-sim-select" 
-            [ngModel]="currentSimValue()" 
-            (ngModelChange)="onSimRoleChange($event)">
-            <option value="ROOT_ADMIN">👑 Level 1: Root Admin (Founder & Owner)</option>
-            <option value="SUPER_ADMIN">⚡ Level 2: Super Admin (Central Platform)</option>
-            <option value="CITY_PUNE">📍 Level 3: City Manager (Pune Operations)</option>
-            <option value="CITY_NAGPUR">📍 Level 3: City Manager (Nagpur Operations)</option>
-            <option value="CITY_AKOLA">📍 Level 3: City Manager (Akola Operations)</option>
-            <option value="CITY_AMRAVATI">📍 Level 3: City Manager (Amravati Operations)</option>
-            <option value="VERIFICATION_STAFF">📑 Level 4: Verification Staff (KYC Queue)</option>
-            <option value="SUPPORT_STAFF">🎧 Level 4: Support Staff (Customer & Merchant)</option>
-          </select>
-        </div>
-
         <!-- Geographic Scope Pill -->
         @if (sessionService.geoAssignment(); as geo) {
           <div class="geo-scope-pill" [title]="'Restricted to ' + geo.cityName + ' operations'">
@@ -173,39 +153,6 @@ import { AdminRole, AdminGeoAssignment } from '@nukkadnow/admin-access-control';
       font-size: 0.75rem;
       font-family: inherit;
       color: var(--admin-text-secondary);
-    }
-
-    /* Role Simulator Selector */
-    .role-simulator-wrap {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      background-color: var(--admin-bg-canvas);
-      border: 1.5px solid var(--admin-border-subtle);
-      border-radius: var(--admin-radius-md);
-      padding: 4px 8px;
-      transition: all 0.2s ease;
-
-      &:hover {
-        border-color: var(--admin-color-primary);
-      }
-    }
-    .sim-icon {
-      font-size: 0.95rem;
-    }
-    .role-sim-select {
-      background: transparent;
-      border: none;
-      color: var(--admin-text-primary);
-      font-size: 0.78rem;
-      font-weight: 700;
-      cursor: pointer;
-      outline: none;
-
-      option {
-        background-color: var(--admin-bg-surface);
-        color: var(--admin-text-primary);
-      }
     }
 
     /* Geographic Scope Pills */
@@ -350,66 +297,6 @@ export class AdminTopbarComponent {
 
   @Output() toggleSidebar = new EventEmitter<void>();
   @Output() openCommandSearch = new EventEmitter<void>();
-
-  currentSimValue(): string {
-    const role = this.sessionService.currentRole();
-    const geo = this.sessionService.geoAssignment();
-    if (role === AdminRole.CITY_OPERATIONS_MANAGER) {
-      if (geo?.cityName === 'Pune') return 'CITY_PUNE';
-      if (geo?.cityName === 'Akola') return 'CITY_AKOLA';
-      if (geo?.cityName === 'Amravati') return 'CITY_AMRAVATI';
-      return 'CITY_NAGPUR';
-    }
-    return role || 'SUPER_ADMIN';
-  }
-
-  onSimRoleChange(val: string): void {
-    if (val === 'ROOT_ADMIN') {
-      this.sessionService.switchRole(AdminRole.ROOT_ADMIN);
-    } else if (val === 'SUPER_ADMIN') {
-      this.sessionService.switchRole(AdminRole.SUPER_ADMIN);
-    } else if (val === 'CITY_PUNE') {
-      const puneGeo: AdminGeoAssignment = {
-        state: 'Maharashtra',
-        district: 'Pune',
-        cityId: 'city-pune',
-        cityName: 'Pune',
-        localities: ['Kothrud', 'Baner', 'Shivaji Nagar', 'Aundh', 'Deccan', 'Viman Nagar'],
-      };
-      this.sessionService.switchRole(AdminRole.CITY_OPERATIONS_MANAGER, puneGeo);
-    } else if (val === 'CITY_NAGPUR') {
-      const nagpurGeo: AdminGeoAssignment = {
-        state: 'Maharashtra',
-        district: 'Nagpur',
-        cityId: 'city-ngp-01',
-        cityName: 'Nagpur',
-        localities: ['Sitabuldi', 'Dharampeth', 'Sadar', 'Ramdaspeth', 'Mahal', 'Wardha Road'],
-      };
-      this.sessionService.switchRole(AdminRole.CITY_OPERATIONS_MANAGER, nagpurGeo);
-    } else if (val === 'CITY_AKOLA') {
-      const akolaGeo: AdminGeoAssignment = {
-        state: 'Maharashtra',
-        district: 'Akola',
-        cityId: 'city-akl-01',
-        cityName: 'Akola',
-        localities: ['Gandhi Chowk', 'Tilak Road', 'Civil Lines', 'Ratanlal Plot', 'Jatharpeth', 'Toshniwal Layout'],
-      };
-      this.sessionService.switchRole(AdminRole.CITY_OPERATIONS_MANAGER, akolaGeo);
-    } else if (val === 'CITY_AMRAVATI') {
-      const amravatiGeo: AdminGeoAssignment = {
-        state: 'Maharashtra',
-        district: 'Amravati',
-        cityId: 'city-amr-01',
-        cityName: 'Amravati',
-        localities: ['Rajkamal Chowk', 'Badnera Road', 'Gadge Nagar', 'Camp', 'Rukmini Nagar', 'Panchavati'],
-      };
-      this.sessionService.switchRole(AdminRole.CITY_OPERATIONS_MANAGER, amravatiGeo);
-    } else if (val === 'VERIFICATION_STAFF') {
-      this.sessionService.switchRole(AdminRole.VERIFICATION_STAFF);
-    } else if (val === 'SUPPORT_STAFF') {
-      this.sessionService.switchRole(AdminRole.SUPPORT_STAFF);
-    }
-  }
 
   lockConsole(): void {
     this.sessionService.lockConsole();

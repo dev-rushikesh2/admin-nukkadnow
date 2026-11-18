@@ -1,5 +1,5 @@
 import { Injectable, signal, computed } from '@angular/core';
-import { AdminRole, AdminPermission, AdminGeoAssignment, ADMIN_ROLE_MATRIX } from '@nukkadnow/admin-access-control';
+import { AdminRole, AdminPermission, AdminGeoAssignment } from '@nukkadnow/admin-access-control';
 
 export interface AdminOperatorSession {
   operatorId: string;
@@ -19,19 +19,6 @@ export interface AdminOperatorSession {
   providedIn: 'root',
 })
 export class AdminSessionService {
-  // Initial default operator session (Root Admin for ultimate platform control)
-  private readonly defaultSession: AdminOperatorSession = {
-    operatorId: 'usr-root-001',
-    name: 'Rajesh Nukkad (Platform Founder)',
-    email: 'founder@nukkadnow.com',
-    role: AdminRole.ROOT_ADMIN,
-    permissions: ADMIN_ROLE_MATRIX[AdminRole.ROOT_ADMIN].permissions,
-    token: 'jwt-root-admin-simulated-bearer-token',
-    expiresAt: Date.now() + 24 * 60 * 60 * 1000,
-    mfaVerified: true,
-    isRootProtected: true,
-  };
-
   private readonly sessionState = signal<AdminOperatorSession | null>(this.getInitialSession());
   private readonly isLockedState = signal<boolean>(false);
 
@@ -45,7 +32,7 @@ export class AdminSessionService {
   });
 
   readonly currentOperator = computed(() => this.sessionState());
-  readonly currentRole = computed(() => this.sessionState()?.role ?? AdminRole.ROOT_ADMIN);
+  readonly currentRole = computed(() => this.sessionState()?.role ?? null);
   readonly currentPermissions = computed(() => this.sessionState()?.permissions ?? []);
   readonly currentGeo = computed(() => this.sessionState()?.geoAssignment ?? null);
   readonly geoAssignment = this.currentGeo;
@@ -57,7 +44,7 @@ export class AdminSessionService {
   readonly isVerificationStaff = computed(() => this.sessionState()?.role === AdminRole.VERIFICATION_STAFF);
   readonly isSupportStaff = computed(() => this.sessionState()?.role === AdminRole.SUPPORT_STAFF);
 
-  private getInitialSession(): AdminOperatorSession {
+  private getInitialSession(): AdminOperatorSession | null {
     if (typeof localStorage !== 'undefined') {
       try {
         const stored = localStorage.getItem('nukkadnow_admin_session');
@@ -69,7 +56,7 @@ export class AdminSessionService {
         }
       } catch (e) {}
     }
-    return this.defaultSession;
+    return null;
   }
 
   setSession(session: AdminOperatorSession): void {
@@ -80,63 +67,6 @@ export class AdminSessionService {
         localStorage.setItem('nukkadnow_admin_session', JSON.stringify(session));
       } catch (e) {}
     }
-  }
-
-  switchRole(role: AdminRole, geoAssignment?: AdminGeoAssignment): void {
-    const roleDef = ADMIN_ROLE_MATRIX[role];
-    let name = 'Platform Administrator';
-    let email = 'admin@nukkadnow.com';
-    let isRootProtected = false;
-
-    if (role === AdminRole.ROOT_ADMIN) {
-      name = 'Rajesh Nukkad (Platform Founder)';
-      email = 'founder@nukkadnow.com';
-      isRootProtected = true;
-    } else if (role === AdminRole.SUPER_ADMIN) {
-      name = 'Rushi Platform Architect';
-      email = 'admin@nukkadnow.com';
-    } else if (role === AdminRole.CITY_OPERATIONS_MANAGER) {
-      if (geoAssignment?.cityName === 'Pune') {
-        name = 'Sneha Kulkarni (Pune Lead)';
-        email = 'pune.ops@nukkadnow.com';
-      } else if (geoAssignment?.cityName === 'Akola') {
-        name = 'Rajesh Sharma (Akola Lead)';
-        email = 'akola.ops@nukkadnow.com';
-      } else if (geoAssignment?.cityName === 'Amravati') {
-        name = 'Pooja Deshmukh (Amravati Lead)';
-        email = 'amravati.ops@nukkadnow.com';
-      } else {
-        name = 'Amit Deshpande (Nagpur Lead)';
-        email = 'nagpur.ops@nukkadnow.com';
-      }
-    } else if (role === AdminRole.VERIFICATION_STAFF) {
-      name = 'Sunita Compliance Officer';
-      email = 'sunita.kyc@nukkadnow.com';
-    } else if (role === AdminRole.SUPPORT_STAFF) {
-      name = 'Ananya Support Specialist';
-      email = 'ananya.support@nukkadnow.com';
-    }
-
-    const newSession: AdminOperatorSession = {
-      operatorId: `usr-${role.toLowerCase().slice(0, 4)}-001`,
-      name,
-      email,
-      role,
-      permissions: roleDef.permissions,
-      geoAssignment: geoAssignment || (role === AdminRole.CITY_OPERATIONS_MANAGER ? {
-        state: 'Maharashtra',
-        district: 'Nagpur',
-        cityId: 'city-ngp-01',
-        cityName: 'Nagpur',
-        localities: ['Sitabuldi', 'Dharampeth', 'Sadar', 'Ramdaspeth', 'Mahal', 'Wardha Road'],
-      } : undefined),
-      token: `jwt-${role.toLowerCase()}-simulated-bearer-token`,
-      expiresAt: Date.now() + 24 * 60 * 60 * 1000,
-      mfaVerified: roleDef.requiresMfa,
-      isRootProtected,
-    };
-
-    this.setSession(newSession);
   }
 
   getToken(): string | null {

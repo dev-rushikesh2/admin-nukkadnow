@@ -29,6 +29,7 @@ export interface CreatePlatformUserDto {
   email: string;
   phone: string;
   roleCode: string;
+  password?: string;
   geoAssignment?: AdminGeoAssignment;
 }
 

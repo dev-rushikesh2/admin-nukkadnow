@@ -47,6 +47,7 @@ export class PlatformUsersListPageComponent implements OnInit {
   readonly newName = signal<string>('');
   readonly newEmail = signal<string>('');
   readonly newPhone = signal<string>('');
+  readonly newPassword = signal<string>('Nukkad@2026!');
   readonly newRoleCode = signal<string>('SUPPORT_STAFF');
   readonly selectedCityId = signal<string>('city-pune');
   readonly selectedLocalities = signal<string[]>([]);
@@ -96,6 +97,25 @@ export class PlatformUsersListPageComponent implements OnInit {
   readonly activeSelectedCity = computed(() => this.cities().find(c => c.id === this.selectedCityId()));
   readonly activeEditCity = computed(() => this.cities().find(c => c.id === this.editCityId()));
 
+  readonly canProvisionUsers = computed(() => {
+    return this.sessionService.isRoot() || this.sessionService.isSuperAdmin() || this.sessionService.isCityManager();
+  });
+
+  readonly allowedRolesForCaller = computed(() => {
+    const all = this.availableRoles();
+    const callerRole = this.sessionService.currentRole();
+    if (callerRole === 'ROOT_ADMIN') {
+      return all.filter(r => r.code !== 'ROOT_ADMIN');
+    }
+    if (callerRole === 'SUPER_ADMIN') {
+      return all.filter(r => r.code !== 'ROOT_ADMIN' && r.code !== 'SUPER_ADMIN');
+    }
+    if (callerRole === 'CITY_OPERATIONS_MANAGER') {
+      return all.filter(r => r.code === 'VERIFICATION_STAFF' || r.code === 'SUPPORT_STAFF');
+    }
+    return [];
+  });
+
   ngOnInit(): void {
     this.loadUsers();
     this.loadCities();
@@ -139,10 +159,26 @@ export class PlatformUsersListPageComponent implements OnInit {
     this.newName.set('');
     this.newEmail.set('');
     this.newPhone.set('+91 ');
-    this.newRoleCode.set('SUPPORT_STAFF');
-    this.selectedCityId.set('city-pune');
-    const firstCity = this.cities().find(c => c.id === 'city-pune') || this.cities()[0];
-    this.selectedLocalities.set(firstCity ? [...firstCity.localities] : []);
+    this.newPassword.set('Nukkad@2026!');
+
+    const callerRole = this.sessionService.currentRole();
+    const callerGeo = this.sessionService.geoAssignment();
+
+    if (callerRole === 'CITY_OPERATIONS_MANAGER' && callerGeo?.cityId) {
+      this.selectedCityId.set(callerGeo.cityId);
+      this.newRoleCode.set('SUPPORT_STAFF');
+      const assignedCity = this.cities().find(c => c.id === callerGeo.cityId);
+      this.selectedLocalities.set(assignedCity ? [...assignedCity.localities] : (callerGeo.localities ? [...callerGeo.localities] : []));
+    } else {
+      const allowed = this.allowedRolesForCaller();
+      this.newRoleCode.set(allowed[0]?.code || 'CITY_OPERATIONS_MANAGER');
+      const defaultCity = this.cities()[0];
+      if (defaultCity) {
+        this.selectedCityId.set(defaultCity.id);
+        this.selectedLocalities.set([...defaultCity.localities]);
+      }
+    }
+
     this.isCreateModalOpen.set(true);
   }
 
@@ -205,6 +241,7 @@ export class PlatformUsersListPageComponent implements OnInit {
       email,
       phone,
       roleCode,
+      password: this.newPassword().trim() || 'Nukkad@2026!',
       geoAssignment
     };
 
