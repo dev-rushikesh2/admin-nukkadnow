@@ -222,3 +222,59 @@ The platform development is tracked across **16 modular, test-driven sprints** c
 - **Sprint 13:** [`docs/sprints/SPRINT_13_HELPDESK_SUPPORT_TICKETS_REVIEWS_MODERATION.md`](file:///c:/Nukkadnow/admin/docs/sprints/SPRINT_13_HELPDESK_SUPPORT_TICKETS_REVIEWS_MODERATION.md) — Support Helpdesk & Reviews Moderation
 - **Sprint 14:** [`docs/sprints/SPRINT_14_PLATFORM_GOVERNANCE_RBAC_FEATURE_FLAGS_HEALTH.md`](file:///c:/Nukkadnow/admin/docs/sprints/SPRINT_14_PLATFORM_GOVERNANCE_RBAC_FEATURE_FLAGS_HEALTH.md) — Platform Governance, RBAC & Feature Flags
 - **Sprint 15:** [`docs/sprints/SPRINT_15_IMMUTABLE_AUDIT_TRAIL_PII_UNMASKING_LAUNCH.md`](file:///c:/Nukkadnow/admin/docs/sprints/SPRINT_15_IMMUTABLE_AUDIT_TRAIL_PII_UNMASKING_LAUNCH.md) — Audit Trail, PII Unmasking & Launch Hardening
+
+---
+
+## 9. Comprehensive Changelog & Architectural Log
+
+### [Release: 2026-11-18] — Dynamic Database RBAC Hierarchy, Geographic Scoping, Dual Theming & Role Simulator
+
+#### 1. Dual-Theming Engine (Clean Light Mode & Dark Mode)
+- **Token-Driven Theming:** Implemented CSS custom properties in `src/styles/tokens.scss` supporting both light (`#f8fafc` canvas, `#ffffff` surface, slate `#e2e8f0` borders, `#0f172a` primary text) and dark mode (`#0b0f19` canvas, `#111827` surface, `#1e293b` borders).
+- **Zero-FOUC Synchronization:** Added inline theme detection script in `index.html` preventing theme flash during initial page load.
+- **Theme Service:** Added `AdminThemeService` using Angular Signals (`signal<'light' | 'dark'>`) with persistent `localStorage` synchronization and OS `prefers-color-scheme` media query detection.
+- **UI Toggles:** Added theme switcher button in `admin-topbar.component.ts` and on authentication/login pages.
+
+#### 2. Four-Level Administrative Hierarchy Implementation
+- **Level 1: Root Admin (`ROOT_ADMIN`):** Ultimate platform authority, platform founder/owner. Sovereign platform control. Protected account: cannot be created, modified, suspended, or deleted via the UI or API Gateway. Zero self-promotion permitted.
+- **Level 2: Super Admin (`SUPER_ADMIN`):** Central platform operations across all cities. Supervise staff, configure feature flags, approve merchant payouts and refund escalations.
+- **Level 3: City Operations Manager (`CITY_OPERATIONS_MANAGER`):** Geographic micro-market assignment (`state`, `district`, `cityId`, `cityName`, `localities`). Scoped to managing city staff, monitoring merchant verification, and city orders.
+- **Level 4: Frontline Operational Staff:**
+  - **Verification Staff (`VERIFICATION_STAFF`):** Statutory KYC queues (FSSAI, GSTIN, PAN, penny drop).
+  - **Support Staff (`SUPPORT_STAFF`):** Customer/merchant support, order triage, and audited PII unmasking.
+- **Level 5: Dynamic Custom Roles:** Custom operational roles dynamically provisioned and stored in database.
+
+#### 3. Module Responsibilities & Scopes Matrix (Table 1 Spec)
+Integrated authoritative governance matrix across all 11 core modules:
+| Module | Root Admin | Super Admin | City Manager | Staff |
+| :--- | :--- | :--- | :--- | :--- |
+| Global dashboard | Full | Full | City only | Limited |
+| Admin management | Full | Manage assigned staff | Manage city staff if authorized | No |
+| Merchant management | Full | Full | Assigned city | Limited |
+| Merchant verification | Full | Full | Monitor | Verify assigned applications |
+| Customer management | Full | Full | City only | Support access |
+| Order management | Full | Full | City only | Support access |
+| Refunds | Full | Approve/manage by policy | Request/escalate | No direct approval |
+| Geographic management | Full | Manage | View assigned city | No |
+| Finance analytics | Full | Full | Limited city reports | No |
+| Platform configuration | Full | Full | No | No |
+| Audit logs | Full | Full | Own scope | Own actions |
+
+#### 4. Screen 5: Dynamic Role & Permission Management (`/roles-permissions`)
+- Replaced stub with full production interface fetching dynamic roles via `AdminApiClient.getPaginated(AdminEndpoints.PLATFORM_ROLES)`.
+- Added interactive **"+ Create Dynamic Role" Modal** allowing creation of custom database-backed roles with code, display title, hierarchy level selection (Level 2-5; Level 1 Root protected), MFA toggle, and granular capability checklists grouped by module.
+- Added role inspection modal to audit assigned granular permissions.
+- Added custom role deletion action with strict protection for core system roles.
+
+#### 5. Screen 3 & 4: Admin & Staff Management with Geographic Assignment (`/platform-users`)
+- Replaced stub with full production operator roster fetching users via `AdminApiClient.getPaginated(AdminEndpoints.PLATFORM_USERS)`.
+- Displays operator contact details, role badges, geographic assignment (city, state, localities), MFA status, and account state (`ACTIVE` / `SUSPENDED`).
+- Added **"+ Provision Admin / Staff" Modal** with dynamic role selector (excluding `ROOT_ADMIN`) and geographic scope assignment block with multi-select locality chips.
+- Added **Reassign Geographic Scope Modal** to update city and micro-market locality boundaries.
+- Added account suspension/activation actions with Root Admin safeguards.
+
+#### 6. Topbar Hierarchy Role Simulator & Dynamic Navigation Filtering
+- Added **Hierarchy Role Simulator** selector in `admin-topbar.component.ts` allowing immediate live switching between `ROOT_ADMIN`, `SUPER_ADMIN`, `CITY_OPERATIONS_MANAGER (Pune)`, `CITY_OPERATIONS_MANAGER (Nagpur)`, `VERIFICATION_STAFF`, and `SUPPORT_STAFF`.
+- Added dynamic geographic scope pill (`[📍 Pune]`, `[📍 Nagpur]`, `[🌐 Global Scope]`) in topbar.
+- Updated `admin-sidebar.component.ts` to automatically filter navigation items in real-time according to the active operator's dynamic permissions.
+
