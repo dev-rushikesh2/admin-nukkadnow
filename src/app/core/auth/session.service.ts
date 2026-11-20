@@ -45,12 +45,28 @@ export class AdminSessionService {
   readonly isSupportStaff = computed(() => this.sessionState()?.role === AdminRole.SUPPORT_STAFF);
 
   private getInitialSession(): AdminOperatorSession | null {
+    if (typeof sessionStorage !== 'undefined') {
+      try {
+        const stored = sessionStorage.getItem('nukkadnow_admin_session');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed && parsed.role && Date.now() < parsed.expiresAt) {
+            return parsed;
+          }
+        }
+      } catch (e) {}
+    }
+    // Migration: purge any stale session from localStorage to prevent XSS exfiltration
     if (typeof localStorage !== 'undefined') {
       try {
         const stored = localStorage.getItem('nukkadnow_admin_session');
         if (stored) {
+          localStorage.removeItem('nukkadnow_admin_session');
           const parsed = JSON.parse(stored);
           if (parsed && parsed.role && Date.now() < parsed.expiresAt) {
+            if (typeof sessionStorage !== 'undefined') {
+              sessionStorage.setItem('nukkadnow_admin_session', JSON.stringify(parsed));
+            }
             return parsed;
           }
         }
@@ -62,9 +78,14 @@ export class AdminSessionService {
   setSession(session: AdminOperatorSession): void {
     this.sessionState.set(session);
     this.isLockedState.set(false);
+    if (typeof sessionStorage !== 'undefined') {
+      try {
+        sessionStorage.setItem('nukkadnow_admin_session', JSON.stringify(session));
+      } catch (e) {}
+    }
     if (typeof localStorage !== 'undefined') {
       try {
-        localStorage.setItem('nukkadnow_admin_session', JSON.stringify(session));
+        localStorage.removeItem('nukkadnow_admin_session');
       } catch (e) {}
     }
   }
@@ -98,6 +119,11 @@ export class AdminSessionService {
   clearSession(): void {
     this.sessionState.set(null);
     this.isLockedState.set(false);
+    if (typeof sessionStorage !== 'undefined') {
+      try {
+        sessionStorage.removeItem('nukkadnow_admin_session');
+      } catch (e) {}
+    }
     if (typeof localStorage !== 'undefined') {
       try {
         localStorage.removeItem('nukkadnow_admin_session');

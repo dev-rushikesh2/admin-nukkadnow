@@ -21,8 +21,11 @@ export const adminPermissionGuard: CanActivateFn = (route, _state) => {
     return true;
   }
 
-  // Denied - redirect to forbidden page or dashboard with security alert
-  return router.createUrlTree(['/overview'], {
-    queryParams: { error: 'ACCESS_DENIED' },
+  // Denied - redirect to dedicated access-denied page with specific required permissions
+  return router.createUrlTree(['/access-denied'], {
+    queryParams: {
+      error: 'ACCESS_DENIED',
+      requiredPermission: requiredPermissions.join(', '),
+    },
   });
 };

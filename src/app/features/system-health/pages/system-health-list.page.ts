@@ -109,7 +109,7 @@ export class SystemHealthListPageComponent implements OnInit {
   }
 
   confirmFlushCache(): void {
-    this.store.flushCache(this.selectedPartition, this.flushReason).subscribe(() => {
+    this.store.flushCache(this.selectedPartition, this.flushReason, this.stepUpCode).subscribe(() => {
       this.closeFlushModal();
     });
   }

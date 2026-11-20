@@ -61,6 +61,7 @@ export class AdminRealtimeService implements OnDestroy {
 
   private scheduleReconnect(): void {
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    if (!this.sessionService.isAuthenticated()) return;
     const delay = Math.min(30000, Math.pow(2, this.reconnectAttempts) * 1000);
     this.reconnectAttempts++;
 

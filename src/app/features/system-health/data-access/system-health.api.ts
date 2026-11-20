@@ -14,8 +14,12 @@ export class SystemHealthApi {
     return this.client.get<any>(this.endpoint);
   }
 
-  flushCache(partition?: string, reasonCode?: string): Observable<ApiResponse<any>> {
-    return this.client.post<any>(`${this.endpoint}/cache/flush`, { partition }, { reasonCode: reasonCode || 'MANUAL_CACHE_FLUSH' });
+  flushCache(partition?: string, reasonCode?: string, stepUpCode?: string): Observable<ApiResponse<any>> {
+    return this.client.post<any>(
+      `${this.endpoint}/cache/flush`,
+      { partition, stepUpCode },
+      { reasonCode: reasonCode || 'MANUAL_CACHE_FLUSH', stepUpTicket: stepUpCode }
+    );
   }
 
   getItems(filters?: SystemHealthNodeFilterCriteria): Observable<ApiResponse<PaginatedResult<SystemHealthNodeViewModel>>> {

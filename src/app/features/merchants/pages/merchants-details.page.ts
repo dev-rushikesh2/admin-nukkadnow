@@ -233,7 +233,13 @@ export class MerchantsDetailsPageComponent implements OnInit {
   private pendingSuspensionJustification = '';
 
   ngOnInit(): void {
-    const id = this.route.snapshot.paramMap.get('id') || 'MER-NGP-101';
+    const id = this.route.snapshot.paramMap.get('id');
+    if (!id || id.trim() === '') {
+      this.router.navigate(['/merchants'], {
+        queryParams: { error: 'INVALID_MERCHANT_ID' },
+      });
+      return;
+    }
     this.repository.fetchById(id).subscribe((m) => this.merchant.set(m));
   }
 

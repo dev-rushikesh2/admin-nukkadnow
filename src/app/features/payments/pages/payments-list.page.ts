@@ -282,9 +282,18 @@ export class PaymentsListPageComponent implements OnInit {
   }
 
   retryFailure(failure: GatewayFailureItem): void {
-    failure.status = 'RESOLVED';
-    this.replaySuccessMsg.set(`Initiated gateway retry for Order ${failure.orderId}. Switch state cleared.`);
-    setTimeout(() => this.replaySuccessMsg.set(null), 4000);
+    this.api.post<any>(AdminEndpoints.PAYMENT_WEBHOOK_REPLAY(failure.id), {}).subscribe({
+      next: () => {
+        failure.status = 'RESOLVED';
+        this.gatewayFailures.update((list) => [...list]);
+        this.replaySuccessMsg.set(`Initiated gateway retry for Order ${failure.orderId}. Replay triggered successfully.`);
+        setTimeout(() => this.replaySuccessMsg.set(null), 4000);
+      },
+      error: (err) => {
+        this.replaySuccessMsg.set(err?.error?.message || `Failed to replay webhook for Order ${failure.orderId}.`);
+        setTimeout(() => this.replaySuccessMsg.set(null), 4000);
+      }
+    });
   }
 
   exportCsv(): void {

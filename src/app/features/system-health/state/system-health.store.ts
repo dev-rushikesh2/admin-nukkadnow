@@ -59,9 +59,9 @@ export class SystemHealthStore {
     });
   }
 
-  flushCache(partition?: string, reasonCode?: string): Observable<any> {
+  flushCache(partition?: string, reasonCode?: string, stepUpCode?: string): Observable<any> {
     this.loadingState.set(true);
-    return this.repository.flushCache(partition, reasonCode).pipe(
+    return this.repository.flushCache(partition, reasonCode, stepUpCode).pipe(
       tap(() => {
         this.loadHealthSummary();
       })

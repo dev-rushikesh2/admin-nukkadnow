@@ -9,6 +9,7 @@ import { DataTableComponent, TableColumn } from '@nukkadnow/admin-data-table';
 import { PiiMaskPipe } from '../../../shared/pipes/pii-mask.pipe';
 import { AdminSessionService } from '../../../core/auth/session.service';
 import { AdminApiClient, AdminEndpoints, ApiResponse } from '@nukkadnow/admin-api-client';
+import { AdminPermissions } from '@nukkadnow/admin-access-control';
 
 @Component({
   selector: 'admin-merchants-list-page',
@@ -23,6 +24,7 @@ export class MerchantsListPageComponent implements OnInit {
   private readonly apiClient = inject(AdminApiClient);
   private readonly router = inject(Router);
   readonly sessionService = inject(AdminSessionService);
+  private readonly piiPipe = new PiiMaskPipe();
 
   // Sub-tabs (Screens #30, #40, #41)
   activeSubTab = signal<'MERCHANTS' | 'COMPLAINTS' | 'SUSPENSIONS'>('MERCHANTS');
@@ -171,16 +173,18 @@ export class MerchantsListPageComponent implements OnInit {
     const data = this.merchants();
     if (data.length === 0) return;
 
+    const canUnmask = this.sessionService.currentPermissions().includes(AdminPermissions.AUDIT_PII_UNMASK);
+
     const headers = ['ID', 'Name', 'Legal Entity', 'Locality', 'Mode', 'Status', 'Phone', 'Email'];
     const rows = data.map(m => [
       m.id,
-      `"${m.name.replace(/"/g, '""')}"`,
-      `"${m.legalEntityName.replace(/"/g, '""')}"`,
+      `"${(m.name || '').replace(/"/g, '""')}"`,
+      `"${(m.legalEntityName || '').replace(/"/g, '""')}"`,
       `"${m.locality}"`,
       m.mode,
       m.status,
-      m.phone,
-      m.email
+      canUnmask ? m.phone : this.piiPipe.transform(m.phone, 'phone'),
+      canUnmask ? m.email : this.piiPipe.transform(m.email, 'email')
     ]);
 
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');

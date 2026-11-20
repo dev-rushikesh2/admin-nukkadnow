@@ -7,13 +7,15 @@ function getCookie(name: string): string | null {
 }
 
 export const csrfInterceptor: HttpInterceptorFn = (req, next) => {
-  // Inject X-XSRF-TOKEN for state-modifying requests
+  // Inject X-XSRF-TOKEN for state-modifying requests if genuine cookie is present
   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
-    const csrfToken = getCookie('XSRF-TOKEN') || 'admin-csrf-session-token';
-    const cloned = req.clone({
-      headers: req.headers.set('X-XSRF-TOKEN', csrfToken),
-    });
-    return next(cloned);
+    const csrfToken = getCookie('XSRF-TOKEN');
+    if (csrfToken) {
+      const cloned = req.clone({
+        headers: req.headers.set('X-XSRF-TOKEN', csrfToken),
+      });
+      return next(cloned);
+    }
   }
 
   return next(req);

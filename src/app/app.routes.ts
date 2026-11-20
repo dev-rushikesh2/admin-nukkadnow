@@ -222,12 +222,26 @@ export const routes: Routes = [
         loadChildren: () =>
           import('./features/profile/profile.routes').then((m) => m.profileRoutes),
       },
+      {
+        path: 'access-denied',
+        loadComponent: () =>
+          import('./features/error-pages/access-denied.page').then(
+            (m) => m.AccessDeniedPageComponent
+          ),
+      },
+      {
+        path: 'not-found',
+        loadComponent: () =>
+          import('./features/error-pages/not-found.page').then(
+            (m) => m.NotFoundPageComponent
+          ),
+      },
     ],
   },
 
-  // 3. Fallback Route
+  // 3. Global Fallback Route
   {
     path: '**',
-    redirectTo: 'overview',
+    redirectTo: 'not-found',
   },
 ];

@@ -12,12 +12,14 @@ export const apiErrorInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
-      // 401 Unauthorized: Session has expired or token revoked
+      // 401 Unauthorized: Session has expired or token revoked (only redirect if not authenticating)
       if (error.status === 401) {
-        sessionService.clearSession();
-        router.navigate(['/auth/login'], {
-          queryParams: { error: 'SESSION_EXPIRED' },
-        });
+        if (!req.url.includes('/auth/login') && !req.url.includes('/auth/mfa/verify')) {
+          sessionService.clearSession();
+          router.navigate(['/auth/login'], {
+            queryParams: { error: 'SESSION_EXPIRED' },
+          });
+        }
       }
 
       // 403 Forbidden: Potential privilege escalation or missing role

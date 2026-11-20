@@ -27,6 +27,8 @@ export class SensitiveActionDirective {
   @Input() targetEntityId = '';
 
   @Output() actionAuthorized = new EventEmitter<{ reasonCode?: string; stepUpTicket?: string }>();
+  @Output() stepUpRequired = new EventEmitter<{ permission: AdminPermission; actionTitle: string }>();
+  @Output() accessDenied = new EventEmitter<{ permission: AdminPermission; message: string }>();
 
   @HostListener('click', ['$event'])
   async onClick(event: Event): Promise<void> {
@@ -36,7 +38,11 @@ export class SensitiveActionDirective {
     // 1. Evaluate baseline authorization
     const policy = PolicyEngine.evaluate(this.permService.userPermissions(), this.permission);
     if (!policy.authorized) {
-      alert(`Access Denied: Missing permission ${this.permission}`);
+      console.warn(`[SensitiveActionDirective] Access Denied: Missing permission ${this.permission}`);
+      this.accessDenied.emit({
+        permission: this.permission,
+        message: `Access Denied: Missing permission ${this.permission}`,
+      });
       return;
     }
 
@@ -44,8 +50,11 @@ export class SensitiveActionDirective {
     let stepUpTicket: string | undefined;
     if (policy.requiresStepUp) {
       if (!this.stepUpService.hasValidTicket(this.permission)) {
-        // Must prompt step-up challenge
-        alert('Secondary MFA verification required for this elevated operation.');
+        console.warn(`[SensitiveActionDirective] Step-up MFA verification required for: ${this.actionTitle}`);
+        this.stepUpRequired.emit({
+          permission: this.permission,
+          actionTitle: this.actionTitle,
+        });
         return;
       }
       stepUpTicket = this.stepUpService.getTicket(this.permission) || undefined;

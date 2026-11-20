@@ -5,6 +5,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { AdminApiClient, AdminEndpoints } from '@nukkadnow/admin-api-client';
 import { AdminSessionService, AdminOperatorSession } from '../../../core/auth/session.service';
 import { AdminThemeService } from '../../../core/theme/theme.service';
+import { environment } from '../../../../environments/environment';
 
 interface ProvisionedAccount {
   levelTitle: string;
@@ -109,31 +110,33 @@ interface ProvisionedAccount {
           </div>
         </div>
 
-        <!-- 4-Level Admin Hierarchy Quick-Fill Test Accounts -->
-        <div class="demo-accounts-card">
-          <div class="demo-accounts-header">
-            <strong class="demo-title">📋 4-Level Administrative Hierarchy Accounts</strong>
-            <p class="demo-sub">Select an account below to populate verified individual credentials:</p>
-          </div>
+        <!-- 4-Level Admin Hierarchy Quick-Fill Test Accounts (Dev/Staging Only) -->
+        @if (!isProduction) {
+          <div class="demo-accounts-card">
+            <div class="demo-accounts-header">
+              <strong class="demo-title">📋 4-Level Administrative Hierarchy Accounts</strong>
+              <p class="demo-sub">Select an account below to populate verified individual credentials:</p>
+            </div>
 
-          <div class="accounts-grid">
-            @for (acc of provisionedAccounts; track acc.email) {
-              <button 
-                type="button" 
-                class="account-pill-card"
-                [class.selected]="email === acc.email"
-                (click)="fillCredentials(acc)">
-                <div class="acc-row-top">
-                  <span class="acc-badge" [ngClass]="acc.badge">{{ acc.levelTitle }}</span>
-                  <span class="acc-city">📍 {{ acc.cityScope }}</span>
-                </div>
-                <div class="acc-name">{{ acc.name }}</div>
-                <div class="acc-email font-mono">{{ acc.email }}</div>
-                <div class="acc-pwd-hint">Password: <code>{{ acc.password }}</code></div>
-              </button>
-            }
+            <div class="accounts-grid">
+              @for (acc of provisionedAccounts; track acc.email) {
+                <button 
+                  type="button" 
+                  class="account-pill-card"
+                  [class.selected]="email === acc.email"
+                  (click)="fillCredentials(acc)">
+                  <div class="acc-row-top">
+                    <span class="acc-badge" [ngClass]="acc.badge">{{ acc.levelTitle }}</span>
+                    <span class="acc-city">📍 {{ acc.cityScope }}</span>
+                  </div>
+                  <div class="acc-name">{{ acc.name }}</div>
+                  <div class="acc-email font-mono">{{ acc.email }}</div>
+                  <div class="acc-pwd-hint">Password: <code>{{ acc.password }}</code></div>
+                </button>
+              }
+            </div>
           </div>
-        </div>
+        }
       </div>
     </div>
   `,
@@ -447,18 +450,19 @@ interface ProvisionedAccount {
 })
 export class LoginPageComponent {
   readonly themeService = inject(AdminThemeService);
+  readonly isProduction = environment.production;
   private readonly adminApi = inject(AdminApiClient);
   private readonly sessionService = inject(AdminSessionService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
-  email = 'founder@nukkadnow.com';
-  password = 'Root@Nukkad2026!';
+  email = environment.production ? '' : 'founder@nukkadnow.com';
+  password = environment.production ? '' : 'Root@Nukkad2026!';
   showPassword = signal(false);
   loading = signal(false);
   errorMessage = signal<string | null>(null);
 
-  readonly provisionedAccounts: ProvisionedAccount[] = [
+  readonly provisionedAccounts: ProvisionedAccount[] = environment.production ? [] : [
     {
       levelTitle: '👑 Level 1',
       roleTitle: 'Root Admin',

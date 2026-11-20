@@ -22,6 +22,14 @@ export class IdleTimeoutService implements OnDestroy {
   private readonly warningDurationMs = environment.sessionWarningCountdownSeconds * 1000;
 
   private readonly boundReset = () => this.recordActivity();
+  private readonly boundVisibility = () => {
+    if (typeof document !== 'undefined' && !document.hidden) {
+      const elapsed = Date.now() - this.lastActivityTimestamp;
+      if (elapsed >= this.timeoutMs) {
+        this.ngZone.run(() => this.lockSessionDueToInactivity());
+      }
+    }
+  };
 
   startMonitoring(): void {
     this.stopMonitoring();
@@ -32,6 +40,7 @@ export class IdleTimeoutService implements OnDestroy {
       window.addEventListener('keydown', this.boundReset, { passive: true });
       window.addEventListener('click', this.boundReset, { passive: true });
       window.addEventListener('scroll', this.boundReset, { passive: true });
+      document.addEventListener('visibilitychange', this.boundVisibility, { passive: true });
     });
   }
 
@@ -43,6 +52,7 @@ export class IdleTimeoutService implements OnDestroy {
     window.removeEventListener('keydown', this.boundReset);
     window.removeEventListener('click', this.boundReset);
     window.removeEventListener('scroll', this.boundReset);
+    document.removeEventListener('visibilitychange', this.boundVisibility);
   }
 
   recordActivity(): void {

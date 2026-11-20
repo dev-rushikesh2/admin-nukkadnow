@@ -5,6 +5,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { AdminApiClient, AdminEndpoints } from '@nukkadnow/admin-api-client';
 import { AdminSessionService, AdminOperatorSession } from '../../../core/auth/session.service';
 import { AdminThemeService } from '../../../core/theme/theme.service';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'admin-mfa-challenge-page',
@@ -60,9 +61,11 @@ import { AdminThemeService } from '../../../core/theme/theme.service';
               autocomplete="one-time-code">
           </div>
 
-          <div class="mfa-helper-text">
-            <span>Demo: Any 6 digits (e.g. <code>123456</code>) or authenticator token</span>
-          </div>
+          @if (!isProduction) {
+            <div class="mfa-helper-text">
+              <span>Demo: Any 6 digits (e.g. <code>123456</code>) or authenticator token</span>
+            </div>
+          }
 
           <button
             type="submit"
@@ -241,6 +244,7 @@ import { AdminThemeService } from '../../../core/theme/theme.service';
 })
 export class MfaChallengePageComponent implements OnInit {
   readonly themeService = inject(AdminThemeService);
+  readonly isProduction = environment.production;
   private readonly adminApi = inject(AdminApiClient);
   private readonly sessionService = inject(AdminSessionService);
   private readonly router = inject(Router);
@@ -299,37 +303,9 @@ export class MfaChallengePageComponent implements OnInit {
         this.router.navigateByUrl(returnUrl);
       },
       error: (err) => {
-        // Check if there is stored pending session in sessionStorage to allow graceful verification
-        if (typeof sessionStorage !== 'undefined') {
-          const pendingRaw = sessionStorage.getItem('nukkadnow_pending_mfa');
-          if (pendingRaw) {
-            try {
-              const pending = JSON.parse(pendingRaw);
-              const op = pending.operator;
-              if (op) {
-                this.sessionService.setSession({
-                  operatorId: op.operatorId,
-                  name: op.name,
-                  email: op.email,
-                  role: op.role,
-                  permissions: op.permissions || [],
-                  geoAssignment: op.geoAssignment,
-                  token: pending.token,
-                  expiresAt: pending.expiresAt,
-                  mfaVerified: true,
-                  isRootProtected: op.isRootProtected,
-                });
-                sessionStorage.removeItem('nukkadnow_pending_mfa');
-                const returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/overview';
-                this.router.navigateByUrl(returnUrl);
-                return;
-              }
-            } catch {}
-          }
-        }
-
         this.loading.set(false);
         this.errorMessage.set(err?.error?.message || 'Invalid 6-digit TOTP security token. Please try again.');
+        this.totpCode = '';
       }
     });
   }

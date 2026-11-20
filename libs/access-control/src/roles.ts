@@ -253,7 +253,6 @@ export const ADMIN_ROLE_MATRIX: Record<AdminRole, AdminRoleDefinition> = {
       AdminPermissions.SUPPORT_ESCALATE,
       AdminPermissions.SUPPORT_RESOLVE,
       AdminPermissions.REVIEWS_READ,
-      AdminPermissions.AUDIT_PII_UNMASK,
       AdminPermissions.AUDIT_LOGS_READ,
     ],
     moduleResponsibilities: {

@@ -1,9 +1,10 @@
-import { Component, inject, ChangeDetectionStrategy, signal } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { PageHeaderComponent, BadgeComponent } from '@nukkadnow/admin-ui';
 import { StepUpModalComponent } from '../../../shared/components/step-up-modal/step-up-modal.component';
 import { AuditReasonDialogService } from '../../../core/audit-context/audit-reason-dialog.service';
 import { AuditLoggerService } from '../../../core/audit-context/audit-logger.service';
+import { AdminApiClient, AdminEndpoints } from '@nukkadnow/admin-api-client';
 
 interface CircuitBreakerFlag {
   key: string;
@@ -94,9 +95,10 @@ interface CircuitBreakerFlag {
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class FeatureFlagsListPageComponent {
+export class FeatureFlagsListPageComponent implements OnInit {
   private readonly auditDialog = inject(AuditReasonDialogService);
   private readonly auditLogger = inject(AuditLoggerService);
+  private readonly adminApi = inject(AdminApiClient);
 
   flags = signal<CircuitBreakerFlag[]>([
     {
@@ -133,6 +135,24 @@ export class FeatureFlagsListPageComponent {
   private pendingReason = '';
   private pendingJustification = '';
 
+  ngOnInit(): void {
+    this.loadFlags();
+  }
+
+  loadFlags(): void {
+    this.adminApi.get<any>(AdminEndpoints.FEATURE_FLAGS).subscribe({
+      next: (res) => {
+        const items = res?.data?.items || (Array.isArray(res?.data) ? res.data : []);
+        if (items && items.length > 0) {
+          this.flags.set(items);
+        }
+      },
+      error: (err) => {
+        console.error('[FEATURE-FLAGS-FETCH-ERROR]', err);
+      }
+    });
+  }
+
   async initiateToggle(flag: CircuitBreakerFlag): Promise<void> {
     const actionLabel = flag.enabled ? 'DISABLE / ACTIVATE KILL-SWITCH' : 'ENABLE / RESTORE';
 
@@ -161,19 +181,36 @@ export class FeatureFlagsListPageComponent {
     const flag = this.pendingFlag();
     if (!flag) return;
 
-    flag.enabled = !flag.enabled;
-    flag.lastModifiedAt = new Date().toISOString();
-    flag.lastModifiedBy = 'Super-Admin Operator (Step-Up Authenticated)';
+    this.adminApi.patch<any>(
+      AdminEndpoints.FEATURE_FLAG_TOGGLE(flag.key),
+      { enabled: !flag.enabled },
+      { stepUpTicket, reasonCode: this.pendingReason, justification: this.pendingJustification }
+    ).subscribe({
+      next: (res) => {
+        const updated = res?.data;
+        if (updated) {
+          flag.enabled = updated.enabled ?? !flag.enabled;
+          flag.lastModifiedAt = updated.lastModifiedAt || new Date().toISOString();
+          flag.lastModifiedBy = updated.lastModifiedBy || 'Super-Admin Operator (Step-Up Authenticated)';
+        } else {
+          flag.enabled = !flag.enabled;
+          flag.lastModifiedAt = new Date().toISOString();
+          flag.lastModifiedBy = 'Super-Admin Operator (Step-Up Authenticated)';
+        }
+        this.flags.update((f) => [...f]);
 
-    this.flags.update((f) => [...f]);
-
-    this.auditLogger.logAction({
-      action: 'FEATURE_FLAG_TOGGLED',
-      targetEntity: 'FeatureFlag',
-      targetId: flag.key,
-      reasonCode: this.pendingReason,
-      justification: this.pendingJustification,
-      metadata: { newState: flag.enabled, stepUpTicket: stepUpTicket.slice(0, 8) + '...' },
+        this.auditLogger.logAction({
+          action: 'FEATURE_FLAG_TOGGLED',
+          targetEntity: 'FeatureFlag',
+          targetId: flag.key,
+          reasonCode: this.pendingReason,
+          justification: this.pendingJustification,
+          metadata: { newState: flag.enabled, stepUpTicket: stepUpTicket.slice(0, 8) + '...' },
+        });
+      },
+      error: (err) => {
+        console.error('[FEATURE-FLAG-TOGGLE-ERROR]', err);
+      }
     });
   }
 }

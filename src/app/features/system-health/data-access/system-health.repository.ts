@@ -26,8 +26,8 @@ export class SystemHealthRepository {
     );
   }
 
-  flushCache(partition?: string, reasonCode?: string): Observable<any> {
-    return this.api.flushCache(partition, reasonCode).pipe(map(res => res.data));
+  flushCache(partition?: string, reasonCode?: string, stepUpCode?: string): Observable<any> {
+    return this.api.flushCache(partition, reasonCode, stepUpCode).pipe(map(res => res.data));
   }
 
   fetchItems(filters?: SystemHealthNodeFilterCriteria): Observable<PaginatedResult<SystemHealthNodeViewModel>> {
