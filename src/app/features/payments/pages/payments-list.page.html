@@ -1,12 +1,16 @@
 <div class="payments-page-container">
   <admin-page-header
-    [title]="'Payments Ledger & Settlements — ' + (sessionService.geoAssignment()?.cityName || (selectedCity() === 'ALL' ? 'Global Grid' : selectedCity()))"
-    subtitle="Audit gateway transactions, manage merchant escrow releases, and replay failed webhooks"
+    [title]="'Fiduciary Operations & Settlements — ' + (sessionService.geoAssignment()?.cityName || (selectedCity() === 'ALL' ? 'Maharashtra Grid' : selectedCity()))"
+    subtitle="Audit multi-city gateway transactions, statutory GST returns, merchant commission invoices & dual-sign ledgers"
     breadcrumb="Console / Financials & Payments">
     <div actions>
       <button type="button" class="admin-btn btn-secondary btn-sm" (click)="refresh()">↻ Refresh</button>
-      <button type="button" class="admin-btn btn-secondary btn-sm" (click)="exportCsv()">Export CSV</button>
-      @if (failedWebhooksCount() > 0) {
+      @if (activeSubTab() === 'LEDGER') {
+        <button type="button" class="admin-btn btn-secondary btn-sm" (click)="exportCsv()">Export CSV</button>
+      } @else if (activeSubTab() === 'GST_REPORTS') {
+        <button type="button" class="admin-btn btn-primary btn-sm" (click)="downloadGstCsv()">📥 Download GSTR JSON / CSV</button>
+      }
+      @if (failedWebhooksCount() > 0 && activeSubTab() === 'LEDGER') {
         <button
           type="button"
           class="admin-btn btn-warning btn-sm"
@@ -25,12 +29,56 @@
     </div>
   }
 
+  <!-- Master Navigation Sub-Tabs (Sprint 10 Fiduciary Suite) -->
+  <div class="fiduciary-subtabs-bar">
+    <button
+      type="button"
+      class="subtab-btn"
+      [class.active]="activeSubTab() === 'LEDGER'"
+      (click)="switchSubTab('LEDGER')">
+      💳 Transactions & Escrow (#80, #81)
+    </button>
+    <button
+      type="button"
+      class="subtab-btn"
+      [class.active]="activeSubTab() === 'INVOICES'"
+      (click)="switchSubTab('INVOICES')">
+      🧾 Merchant Invoices Archive (#87, #93)
+      <span class="tab-badge">{{ invoices().length }}</span>
+    </button>
+    <button
+      type="button"
+      class="subtab-btn"
+      [class.active]="activeSubTab() === 'GST_REPORTS'"
+      (click)="switchSubTab('GST_REPORTS')">
+      📊 Statutory GST & TCS Returns (#88, #92)
+      <span class="tab-badge">{{ gstReports().length }}</span>
+    </button>
+    <button
+      type="button"
+      class="subtab-btn"
+      [class.active]="activeSubTab() === 'GATEWAY_FAILURES'"
+      (click)="switchSubTab('GATEWAY_FAILURES')">
+      ⚡ Payment Failures & Latency (#89)
+      @if (gatewayFailures().length > 0) {
+        <span class="tab-badge red">{{ gatewayFailures().length }}</span>
+      }
+    </button>
+    <button
+      type="button"
+      class="subtab-btn"
+      [class.active]="activeSubTab() === 'FINANCIAL_AUDIT'"
+      (click)="switchSubTab('FINANCIAL_AUDIT')">
+      📜 Dual-Sign Financial Audit (#90)
+    </button>
+  </div>
+
   <!-- City Scope Selection -->
   @if (sessionService.isRoot() || sessionService.isSuperAdmin()) {
     <div class="territory-filter-bar">
-      <span class="bar-lbl">Territory Filter:</span>
+      <span class="bar-lbl">Territory Scope:</span>
       <div class="city-pills">
-        <button type="button" class="cpill" [class.active]="selectedCity() === 'ALL'" (click)="onCityChange('ALL')">All Cities (Global)</button>
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'ALL'" (click)="onCityChange('ALL')">All Maharashtra (Global)</button>
         <button type="button" class="cpill" [class.active]="selectedCity() === 'Nagpur'" (click)="onCityChange('Nagpur')">📍 Nagpur</button>
         <button type="button" class="cpill" [class.active]="selectedCity() === 'Akola'" (click)="onCityChange('Akola')">📍 Akola</button>
         <button type="button" class="cpill" [class.active]="selectedCity() === 'Amravati'" (click)="onCityChange('Amravati')">📍 Amravati</button>
@@ -39,68 +87,328 @@
     </div>
   } @else if (sessionService.geoAssignment()) {
     <div class="geo-locked-banner">
-      <span>📍 Payment settlements and escrow balances scoped strictly to <strong>{{ sessionService.geoAssignment()?.cityName }} Municipal Territory</strong></span>
+      <span>📍 Financial settlements and reports locked strictly to <strong>{{ sessionService.geoAssignment()?.cityName }} Municipal Corporation</strong></span>
     </div>
   }
 
-  <!-- Summary Metric Chips -->
-  <div class="payments-metrics-row">
-    <div class="pmetric-chip blue">
-      <span class="pmetric-val">{{ totalVolumeFormatted() }}</span>
-      <span class="pmetric-lbl">Gross Settled Volume</span>
-    </div>
-    <div class="pmetric-chip green">
-      <span class="pmetric-val">{{ capturedCount() }}</span>
-      <span class="pmetric-lbl">Captured Transactions</span>
-    </div>
-    <div class="pmetric-chip amber">
-      <span class="pmetric-val">{{ escrowHoldingFormatted() }}</span>
-      <span class="pmetric-lbl">Escrow Under Holding</span>
-    </div>
-    <div class="pmetric-chip" [class.red]="failedWebhooksCount() > 0" [class.purple]="failedWebhooksCount() === 0">
-      <span class="pmetric-val">{{ failedWebhooksCount() }}</span>
-      <span class="pmetric-lbl">Failed Webhook Events</span>
-    </div>
-  </div>
-
-  <!-- Operational Filter Toolbar -->
-  <div class="filter-toolbar">
-    <div class="status-tabs">
-      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'ALL'" (click)="onStatusChange('ALL')">
-        All ({{ store.items().length }})
-      </button>
-      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'CAPTURED'" (click)="onStatusChange('CAPTURED')">
-        Captured
-      </button>
-      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'SETTLED'" (click)="onStatusChange('SETTLED')">
-        Settled
-      </button>
-      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'PENDING'" (click)="onStatusChange('PENDING')">
-        Pending
-      </button>
-      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'FAILED'" (click)="onStatusChange('FAILED')">
-        Failed
-      </button>
+  <!-- TAB 1: TRANSACTIONS & ESCROW LEDGER -->
+  @if (activeSubTab() === 'LEDGER') {
+    <!-- Summary Metric Chips -->
+    <div class="payments-metrics-row">
+      <div class="pmetric-chip blue">
+        <span class="pmetric-val">{{ totalVolumeFormatted() }}</span>
+        <span class="pmetric-lbl">Gross Settled Volume</span>
+      </div>
+      <div class="pmetric-chip green">
+        <span class="pmetric-val">{{ capturedCount() }}</span>
+        <span class="pmetric-lbl">Captured Transactions</span>
+      </div>
+      <div class="pmetric-chip amber">
+        <span class="pmetric-val">{{ escrowHoldingFormatted() }}</span>
+        <span class="pmetric-lbl">Escrow Under Holding</span>
+      </div>
+      <div class="pmetric-chip" [class.red]="failedWebhooksCount() > 0" [class.purple]="failedWebhooksCount() === 0">
+        <span class="pmetric-val">{{ failedWebhooksCount() }}</span>
+        <span class="pmetric-lbl">Failed Webhook Events</span>
+      </div>
     </div>
 
-    <div class="search-box">
-      <input
-        type="search"
-        placeholder="Filter by txn ID, order ID, customer, merchant, gateway ref..."
-        [value]="searchQuery()"
-        (input)="onSearchChange($event)"
-        class="search-input" />
-    </div>
-  </div>
+    <!-- Operational Filter Toolbar -->
+    <div class="filter-toolbar">
+      <div class="status-tabs">
+        <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'ALL'" (click)="onStatusChange('ALL')">
+          All ({{ store.items().length }})
+        </button>
+        <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'CAPTURED'" (click)="onStatusChange('CAPTURED')">
+          Captured
+        </button>
+        <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'SETTLED'" (click)="onStatusChange('SETTLED')">
+          Settled
+        </button>
+        <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'PENDING'" (click)="onStatusChange('PENDING')">
+          Pending
+        </button>
+        <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'FAILED'" (click)="onStatusChange('FAILED')">
+          Failed
+        </button>
+      </div>
 
-  <!-- Data Table -->
-  <div class="table-container">
-    <admin-data-table
-      [columns]="tableColumns"
-      [data]="filteredPayments()"
-      [totalCount]="filteredPayments().length"
-      [loading]="store.loading()"
-      (rowClick)="onRowClick($event)">
-    </admin-data-table>
-  </div>
+      <div class="search-box">
+        <input
+          type="search"
+          placeholder="Filter by txn ID, order ID, customer, merchant, gateway ref..."
+          [value]="searchQuery()"
+          (input)="onSearchChange($event)"
+          class="search-input" />
+      </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="table-container">
+      <admin-data-table
+        [columns]="tableColumns"
+        [data]="filteredPayments()"
+        [pageSize]="10"
+        (rowClick)="onRowClick($event)">
+        <ng-template #cellTemplate let-item let-column="column">
+          @if (column.key === 'id') {
+            <span class="font-mono text-xs font-semibold text-primary">{{ item.id }}</span>
+          } @else if (column.key === 'orderId') {
+            <span class="font-mono text-xs text-secondary">{{ item.orderId }}</span>
+          } @else if (column.key === 'merchantName') {
+            <div>
+              <div class="font-medium text-primary">{{ item.merchantName }}</div>
+              <div class="text-xs text-muted">{{ item.city }} • {{ item.locality }}</div>
+            </div>
+          } @else if (column.key === 'amountFormatted') {
+            <span class="font-bold text-primary">{{ item.amountFormatted }}</span>
+          } @else if (column.key === 'paymentMethod') {
+            <span class="method-chip">{{ item.paymentMethod }}</span>
+          } @else if (column.key === 'escrowStatus') {
+            <span class="escrow-badge" [class.held]="item.escrowStatus === 'HELD_DISPUTE'" [class.released]="item.escrowStatus === 'RELEASED_TO_MERCHANT'">
+              {{ item.escrowStatus }}
+            </span>
+          } @else if (column.key === 'status') {
+            <admin-payments-status-chip [status]="item.status"></admin-payments-status-chip>
+          }
+        </ng-template>
+      </admin-data-table>
+    </div>
+  }
+
+  <!-- TAB 2: INVOICES ARCHIVE (Screen #87 / #93) -->
+  @if (activeSubTab() === 'INVOICES') {
+    <div class="tab-content-panel">
+      <div class="panel-header">
+        <div>
+          <h3>Monthly Platform Commission Invoices (Screens #87 & #93)</h3>
+          <p class="panel-desc">Statutory tax invoices rendered per registered merchant outlet with GST and TCS breakdown.</p>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Invoice Number</th>
+              <th>Merchant & Store</th>
+              <th>City</th>
+              <th>Billing Period</th>
+              <th>Gross GMV</th>
+              <th>Commission (5%)</th>
+              <th>GST (18%)</th>
+              <th>TCS (Sec 52)</th>
+              <th>Net Payout</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (inv of invoices(); track inv.id) {
+              <tr>
+                <td><span class="font-mono text-xs font-bold text-primary">{{ inv.invoiceNumber }}</span></td>
+                <td>
+                  <div class="font-semibold text-primary">{{ inv.merchantName }}</div>
+                  <div class="text-xs text-muted">{{ inv.outletName }}</div>
+                </td>
+                <td><span class="city-tag">📍 {{ inv.city }}</span></td>
+                <td><span class="text-xs font-medium">{{ inv.billingPeriod }}</span></td>
+                <td><strong>₹{{ inv.grossGmvRupees.toLocaleString('en-IN') }}</strong></td>
+                <td class="text-amber-600 font-semibold">₹{{ inv.commissionRupees.toLocaleString('en-IN') }}</td>
+                <td class="text-xs">₹{{ inv.gstRupees.toLocaleString('en-IN') }}</td>
+                <td class="text-xs">₹{{ inv.tcsRupees.toLocaleString('en-IN') }}</td>
+                <td><strong class="text-green-600 font-bold">₹{{ inv.netPayableRupees.toLocaleString('en-IN') }}</strong></td>
+                <td>
+                  <admin-badge [variant]="inv.status === 'PAID' ? 'success' : 'warning'">
+                    {{ inv.status }}
+                  </admin-badge>
+                </td>
+                <td>
+                  <a [href]="inv.pdfUrl" class="admin-btn btn-secondary btn-xs" target="_blank" download>
+                    📄 PDF
+                  </a>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- TAB 3: STATUTORY GST & TCS RETURNS (Screen #88 / #92) -->
+  @if (activeSubTab() === 'GST_REPORTS') {
+    <div class="tab-content-panel">
+      <div class="panel-header">
+        <div>
+          <h3>Statutory GST Filings & Tax Collection at Source (TCS) (Screens #88 & #92)</h3>
+          <p class="panel-desc">GSTR-1, GSTR-3B and Section 52 TCS monthly filings for Maharashtra E-Commerce Operator compliance.</p>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Filing Month</th>
+              <th>Jurisdiction</th>
+              <th>Operator GSTIN</th>
+              <th>Taxable Supplies</th>
+              <th>CGST (9%)</th>
+              <th>SGST (9%)</th>
+              <th>TCS Sec 52 (0.1%)</th>
+              <th>Status</th>
+              <th>ARN / Filing Receipt</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (gst of gstReports(); track gst.id) {
+              <tr>
+                <td><strong>{{ gst.monthName }}</strong></td>
+                <td><span class="city-tag">📍 {{ gst.city }}, {{ gst.state }}</span></td>
+                <td><span class="font-mono text-xs">{{ gst.platformGstin }}</span></td>
+                <td><strong>₹{{ gst.taxableSuppliesRupees.toLocaleString('en-IN') }}</strong></td>
+                <td class="text-xs">₹{{ gst.cgstRupees.toLocaleString('en-IN') }}</td>
+                <td class="text-xs">₹{{ gst.sgstRupees.toLocaleString('en-IN') }}</td>
+                <td><strong class="text-purple-600 font-bold">₹{{ gst.tcsCollectedRupees.toLocaleString('en-IN') }}</strong></td>
+                <td>
+                  <admin-badge [variant]="gst.filingStatus === 'FILED' ? 'success' : 'warning'">
+                    {{ gst.filingStatus }}
+                  </admin-badge>
+                </td>
+                <td>
+                  @if (gst.arnNumber) {
+                    <span class="font-mono text-xs text-green-700 font-semibold">{{ gst.arnNumber }}</span>
+                  } @else {
+                    <span class="text-xs text-muted">Awaiting Verification</span>
+                  }
+                </td>
+                <td>
+                  <button type="button" class="admin-btn btn-secondary btn-xs" (click)="downloadGstCsv()">
+                    📥 Export JSON
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- TAB 4: PAYMENT FAILURES & GATEWAY LATENCY (Screen #89) -->
+  @if (activeSubTab() === 'GATEWAY_FAILURES') {
+    <div class="tab-content-panel">
+      <div class="panel-header">
+        <div>
+          <h3>Payment Gateway Failure Diagnostics & Webhook Triage (Screen #89)</h3>
+          <p class="panel-desc">Real-time gateway error responses, bank switch timeouts, and retry orchestration.</p>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Event ID</th>
+              <th>Order ID</th>
+              <th>City</th>
+              <th>Gateway & Method</th>
+              <th>HTTP & Error Code</th>
+              <th>Diagnostic Message</th>
+              <th>Retries</th>
+              <th>Status</th>
+              <th>Resolution Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (f of gatewayFailures(); track f.id) {
+              <tr>
+                <td><span class="font-mono text-xs">{{ f.id }}</span></td>
+                <td><span class="font-mono text-xs font-bold text-primary">{{ f.orderId }}</span></td>
+                <td><span class="city-tag">📍 {{ f.city }}</span></td>
+                <td>
+                  <div class="font-medium text-xs">{{ f.gateway }}</div>
+                  <span class="method-chip">{{ f.paymentMethod }}</span>
+                </td>
+                <td>
+                  <span class="status-pill text-xs red font-mono">{{ f.httpStatusCode }}: {{ f.errorCode }}</span>
+                </td>
+                <td><span class="text-xs text-muted">{{ f.errorMessage }}</span></td>
+                <td><strong>{{ f.retryCount }}</strong></td>
+                <td>
+                  <admin-badge [variant]="f.status === 'RESOLVED' ? 'success' : (f.status === 'PENDING_RETRY' ? 'warning' : 'danger')">
+                    {{ f.status }}
+                  </admin-badge>
+                </td>
+                <td>
+                  @if (f.status !== 'RESOLVED') {
+                    <button type="button" class="admin-btn btn-primary btn-xs" (click)="retryFailure(f)">
+                      ↻ Force Retry
+                    </button>
+                  } @else {
+                    <span class="text-xs text-green-600 font-semibold">✓ Resolved</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- TAB 5: FINANCIAL AUDIT LOG (Screen #90) -->
+  @if (activeSubTab() === 'FINANCIAL_AUDIT') {
+    <div class="tab-content-panel">
+      <div class="panel-header">
+        <div>
+          <h3>Four-Eyes Dual-Sign Financial Audit Ledger (Screen #90)</h3>
+          <p class="panel-desc">Immutable cryptographic records of all high-value escrow releases, disputes, and commission slab adjustments.</p>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Audit Ref</th>
+              <th>Timestamp</th>
+              <th>Action Entity</th>
+              <th>Amount</th>
+              <th>Territory</th>
+              <th>Authorized Signers (Dual-Sign)</th>
+              <th>Escrow Release Batch</th>
+              <th>Cryptographic HMAC-SHA256 Hash</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (log of financialAuditLogs(); track log.id) {
+              <tr>
+                <td><span class="font-mono text-xs font-bold">{{ log.id }}</span></td>
+                <td><span class="text-xs text-muted">{{ log.timestamp | date:'short' }}</span></td>
+                <td><span class="font-semibold text-primary">{{ log.action }}</span></td>
+                <td><strong>₹{{ log.amountRupees.toLocaleString('en-IN') }}</strong></td>
+                <td><span class="city-tag">📍 {{ log.city }}</span></td>
+                <td>
+                  <div class="text-xs font-medium">
+                    @for (s of log.signers; track s) {
+                      <div>✓ {{ s }}</div>
+                    }
+                  </div>
+                </td>
+                <td><span class="font-mono text-xs">{{ log.escrowReleaseBatchId }}</span></td>
+                <td><span class="font-mono text-xs text-muted truncate-hash">{{ log.hash }}</span></td>
+                <td>
+                  <admin-badge variant="success">{{ log.status }}</admin-badge>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
 </div>

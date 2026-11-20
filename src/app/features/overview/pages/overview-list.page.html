@@ -15,194 +15,507 @@
     </div>
   </admin-page-header>
 
-  <!-- City Scope Filter Toolbar (Root & Super Admin can switch; City Manager is locked) -->
-  @if (sessionService.isRoot() || sessionService.isSuperAdmin()) {
-    <div class="city-filter-toolbar">
-      <span class="filter-label">Municipal Jurisdiction:</span>
-      <div class="filter-pills">
-        <button 
-          type="button" 
-          class="city-pill" 
-          [class.active]="selectedCityFilter() === 'ALL'" 
-          (click)="setCityFilter('ALL')">
-          🌐 All Cities (Global Command)
-        </button>
-        <button 
-          type="button" 
-          class="city-pill" 
-          [class.active]="selectedCityFilter() === 'Nagpur'" 
-          (click)="setCityFilter('Nagpur')">
-          📍 Nagpur
-        </button>
-        <button 
-          type="button" 
-          class="city-pill" 
-          [class.active]="selectedCityFilter() === 'Akola'" 
-          (click)="setCityFilter('Akola')">
-          📍 Akola
-        </button>
-        <button 
-          type="button" 
-          class="city-pill" 
-          [class.active]="selectedCityFilter() === 'Amravati'" 
-          (click)="setCityFilter('Amravati')">
-          📍 Amravati
-        </button>
-        <button 
-          type="button" 
-          class="city-pill" 
-          [class.active]="selectedCityFilter() === 'Pune'" 
-          (click)="setCityFilter('Pune')">
-          📍 Pune
-        </button>
+  <!-- Persona Dashboard Navigation (Screens #1, #2, #3, #4, #5) -->
+  <div class="persona-tabs-bar">
+    <button
+      type="button"
+      class="persona-tab"
+      [class.active]="activePersona() === 'GLOBAL'"
+      (click)="setPersona('GLOBAL')">
+      🌐 Global Operations (Super Admin)
+    </button>
+    <button
+      type="button"
+      class="persona-tab"
+      [class.active]="activePersona() === 'ROOT'"
+      (click)="setPersona('ROOT')">
+      👑 Root Admin Executive
+    </button>
+    <button
+      type="button"
+      class="persona-tab"
+      [class.active]="activePersona() === 'CITY_OPS'"
+      (click)="setPersona('CITY_OPS')">
+      🏙️ City Operations ({{ activeCityScopeName() }})
+    </button>
+    <button
+      type="button"
+      class="persona-tab"
+      [class.active]="activePersona() === 'VERIFICATION'"
+      (click)="setPersona('VERIFICATION')">
+      🛡️ Verification Triage
+    </button>
+    <button
+      type="button"
+      class="persona-tab"
+      [class.active]="activePersona() === 'SUPPORT'"
+      (click)="setPersona('SUPPORT')">
+      🎧 Support & Helpdesk
+    </button>
+  </div>
+
+  <!-- PERSONA VIEW 1: ROOT ADMIN EXECUTIVE DASHBOARD (Screen #1) -->
+  @if (activePersona() === 'ROOT') {
+    <div class="persona-content animate-fade-in">
+      <div class="metrics-grid">
+        <admin-metric-card
+          title="All-City Gross GMV"
+          [value]="personaData()?.rootAdmin?.globalGmvRupees ? '₹ ' + (personaData()?.rootAdmin?.globalGmvRupees / 100).toLocaleString('en-IN') : '₹ 52,458.00'"
+          delta="+28.4% MoM"
+          deltaType="positive"
+          period="across 4 cities"
+          icon="💰"
+          [highlight]="true">
+        </admin-metric-card>
+        <admin-metric-card
+          title="Platform Take Rate"
+          [value]="(personaData()?.rootAdmin?.platformTakeRatePct || 3.8) + '%'"
+          delta="+0.4% QoQ"
+          deltaType="positive"
+          period="commission blend"
+          icon="📈">
+        </admin-metric-card>
+        <admin-metric-card
+          title="Gross Margin (EBITDA)"
+          [value]="(personaData()?.rootAdmin?.investorGrossMarginPct || 78.4) + '%'"
+          delta="Unit Economics"
+          deltaType="positive"
+          period="healthy profit"
+          icon="💎">
+        </admin-metric-card>
+        <admin-metric-card
+          title="Cloud Infra Costs"
+          [value]="personaData()?.rootAdmin?.cloudInfraCostRupees ? '₹ ' + (personaData()?.rootAdmin?.cloudInfraCostRupees / 100).toLocaleString('en-IN') : '₹ 428.00'"
+          delta="11 Microservices"
+          deltaType="neutral"
+          period="AWS & DigitalOcean"
+          icon="☁️">
+        </admin-metric-card>
       </div>
-    </div>
-  } @else if (sessionService.geoAssignment()) {
-    <div class="assigned-city-banner">
-      <span class="banner-icon">📍</span>
-      <span>Operating under <strong>{{ sessionService.geoAssignment()?.cityName }} Municipal Territory</strong> ({{ sessionService.geoAssignment()?.state }}) · Cross-city access isolated</span>
+
+      <!-- Multi-City Expansion Waterfall Table -->
+      <div class="dashboard-card mt-3">
+        <div class="card-title-bar">
+          <h3>📊 Municipal Territories Performance & Growth Waterfall</h3>
+          <span class="badge badge-info">Authoritative Multi-City GMV</span>
+        </div>
+        <div class="card-body p-0">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Municipal City</th>
+                <th>Gross GMV (Rupees)</th>
+                <th>MoM Growth Rate</th>
+                <th>Active Storefronts</th>
+                <th>Performance Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (city of personaData()?.rootAdmin?.activeCities || []; track city.city) {
+                <tr>
+                  <td class="font-bold">📍 {{ city.city }}</td>
+                  <td class="font-mono font-medium">₹ {{ (city.gmvRupees / 100).toLocaleString('en-IN') }}</td>
+                  <td class="text-success font-semibold">{{ city.growthPct }}</td>
+                  <td>{{ city.activeMerchants }} Outlets</td>
+                  <td><span class="status-badge success">Strong Traction</span></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   }
 
-  <!-- High-Level KPI Metric Tiles -->
-  <div class="metrics-grid">
-    <admin-metric-card
-      [title]="'Today\'s GMV (' + activeCityScopeName() + ')'"
-      [value]="metrics()?.todayGmv || '₹ 0.00'"
-      [delta]="metrics()?.todayGmvDelta || '+0%'"
-      deltaType="positive"
-      period="vs yesterday"
-      icon="💰"
-      [highlight]="true">
-    </admin-metric-card>
-
-    <admin-metric-card
-      title="Active Merchants"
-      [value]="(metrics()?.activeMerchants ?? 0).toString()"
-      [delta]="metrics()?.activeMerchantsDelta || '0 onboarding'"
-      deltaType="positive"
-      period="this week"
-      icon="🏬">
-    </admin-metric-card>
-
-    <admin-metric-card
-      title="In-Flight Orders"
-      [value]="(metrics()?.inFlightOrders ?? 0).toString()"
-      [delta]="metrics()?.inFlightOrdersAdherence || 'Adherence'"
-      deltaType="positive"
-      period="pickup adherence"
-      icon="🛍️">
-    </admin-metric-card>
-
-    <admin-metric-card
-      title="KYC Verification Queue"
-      [value]="(metrics()?.kycVerificationQueue ?? 0).toString()"
-      [delta]="metrics()?.kycQueueSla || 'SLA'"
-      deltaType="neutral"
-      period="compliance queue"
-      icon="🛡️">
-    </admin-metric-card>
-
-    <admin-metric-card
-      title="Pending Refunds"
-      [value]="(metrics()?.pendingRefunds ?? 0).toString()"
-      [delta]="metrics()?.pendingRefundsAmount || '₹ 0 total'"
-      deltaType="negative"
-      period="requires dual-sign"
-      icon="↩️">
-    </admin-metric-card>
-
-    <admin-metric-card
-      title="System Mesh P95 Latency"
-      [value]="metrics()?.meshLatency || '42 ms'"
-      [delta]="metrics()?.meshLatencyHealth || 'Healthy'"
-      deltaType="positive"
-      period="microservices"
-      icon="⚡">
-    </admin-metric-card>
-  </div>
-
-  <!-- Operational Focus Layout: 2 Columns -->
-  <div class="dashboard-split-grid">
-    <!-- Left Column: Locality Performance & Queue Pressure -->
-    <div class="dashboard-card">
-      <div class="card-title-bar">
-        <h3>📍 Locality Fulfillment Pressure ({{ activeCityScopeName() }})</h3>
-        <span class="badge badge-info">Live Stream</span>
+  <!-- PERSONA VIEW 2: CITY OPERATIONS MANAGER DASHBOARD (Screen #3) -->
+  @if (activePersona() === 'CITY_OPS') {
+    <div class="persona-content animate-fade-in">
+      <div class="metrics-grid">
+        <admin-metric-card
+          [title]="activeCityScopeName() + ' Delayed Pickups'"
+          [value]="(personaData()?.cityOps?.delayedPickupsCount || 3).toString()"
+          delta="Action Required"
+          deltaType="negative"
+          period="> 15m past ready"
+          icon="⚠️"
+          [highlight]="true">
+        </admin-metric-card>
+        <admin-metric-card
+          title="Merchant Online Ratio"
+          [value]="personaData()?.cityOps?.merchantOnlineRatio || '94.2%'"
+          delta="High Availability"
+          deltaType="positive"
+          period="active operating hours"
+          icon="🏬">
+        </admin-metric-card>
+        <admin-metric-card
+          title="Active Couriers on Road"
+          [value]="(personaData()?.cityOps?.activeCouriersOnRoad || 26).toString()"
+          delta="Nagpur Fleet"
+          deltaType="positive"
+          period="last-mile delivery"
+          icon="🛵">
+        </admin-metric-card>
       </div>
 
-      <div class="locality-breakdown-list">
-        @if (localityFulfillment().length === 0) {
-          <div class="empty-state-hint">
-            <span>No localized fulfillment pressure reported in current jurisdiction.</span>
-          </div>
-        } @else {
-          @for (loc of localityFulfillment(); track loc.name) {
+      <div class="dashboard-card mt-3">
+        <div class="card-title-bar">
+          <h3>📍 Micro-Market Locality Load & Congestion Breakdown ({{ activeCityScopeName() }})</h3>
+          <span class="badge badge-warning">Live Fleet Routing</span>
+        </div>
+        <div class="locality-breakdown-list">
+          @for (loc of personaData()?.cityOps?.localityPressure || []; track loc.locality) {
             <div class="locality-row">
               <div class="locality-info">
-                <span class="locality-name">{{ loc.name }}</span>
-                <span class="locality-stats">{{ loc.outlets }} Outlets · {{ loc.activeBatches }} Active Batches</span>
+                <span class="locality-name">{{ loc.locality }}</span>
+                <span class="locality-stats">{{ loc.activeOrders }} Active Orders Stream</span>
               </div>
               <div class="pressure-bar-container">
-                <div class="pressure-fill" [ngClass]="loc.status" [style.width.%]="loc.pressure"></div>
+                <div class="pressure-fill" [ngClass]="loc.status.toLowerCase()" [style.width.%]="loc.loadPct"></div>
               </div>
-              <span class="pressure-label" [ngClass]="{ warning: loc.status === 'high' }">
-                {{ loc.status | titlecase }} ({{ loc.pressure }}%)
+              <span class="pressure-label" [ngClass]="{ warning: loc.loadPct > 65 }">
+                {{ loc.status }} ({{ loc.loadPct }}%)
               </span>
             </div>
           }
-        }
+        </div>
       </div>
     </div>
+  }
 
-    <!-- Right Column: Priority Security & Operations Log -->
-    <div class="dashboard-card">
-      <div class="card-title-bar">
-        <h3>🚨 Priority Action Triage</h3>
-        <span class="badge badge-warning">Operator Action Required</span>
+  <!-- PERSONA VIEW 3: VERIFICATION STAFF DASHBOARD (Screen #4) -->
+  @if (activePersona() === 'VERIFICATION') {
+    <div class="persona-content animate-fade-in">
+      <div class="metrics-grid">
+        <admin-metric-card
+          title="Pending KYC Queue"
+          [value]="(personaData()?.verificationStaff?.pendingQueueCount || 5).toString()"
+          delta="Active Triage"
+          deltaType="neutral"
+          period="awaiting review"
+          icon="🛡️"
+          [highlight]="true">
+        </admin-metric-card>
+        <admin-metric-card
+          title="Urgent SLA Breaches"
+          [value]="(personaData()?.verificationStaff?.slaUrgentCount || 2).toString()"
+          delta="< 2 hours left"
+          deltaType="negative"
+          period="expedite review"
+          icon="⏰">
+        </admin-metric-card>
+        <admin-metric-card
+          title="Verified This Week"
+          [value]="(personaData()?.verificationStaff?.verifiedThisWeekCount || 18).toString()"
+          delta="+4 vs last week"
+          deltaType="positive"
+          period="approved partners"
+          icon="✅">
+        </admin-metric-card>
+        <admin-metric-card
+          title="Rejection Rate"
+          [value]="(personaData()?.verificationStaff?.rejectionRatePct || 8.4) + '%'"
+          delta="Mainly blurry FSSAI"
+          deltaType="neutral"
+          period="regulatory audit"
+          icon="📋">
+        </admin-metric-card>
       </div>
 
-      <div class="action-triage-list">
-        @if (actionTriage().length === 0) {
-          <div class="empty-state-hint">
-            <span>✓ No urgent operational blockers. System operating normally.</span>
-          </div>
-        } @else {
-          @for (item of actionTriage(); track item.id) {
-            <div class="triage-item" [ngClass]="item.severity">
-              <div class="triage-icon">
-                {{ item.type === 'KYC' ? '🛡️' : item.type === 'REFUND' ? '↩️' : '📦' }}
-              </div>
-              <div class="triage-content">
-                <span class="triage-title">{{ item.title }}</span>
-                <span class="triage-meta">{{ item.meta }}</span>
-              </div>
-              <button 
-                type="button"
-                class="admin-btn btn-sm" 
-                [ngClass]="item.severity === 'danger' ? 'btn-danger' : 'btn-secondary'" 
-                (click)="navigateTo(item.route)">
-                {{ item.type === 'KYC' ? 'Review' : item.type === 'REFUND' ? 'Authorize' : 'Inspect' }}
-              </button>
+      <div class="dashboard-card mt-3">
+        <div class="card-title-bar">
+          <h3>🛡️ Merchant Onboarding Verification Funnel</h3>
+          <button type="button" class="admin-btn btn-primary btn-sm" (click)="navigateTo('/merchant-verification')">
+            Open Full Verification Queue →
+          </button>
+        </div>
+        <div class="card-body p-0">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Verification Funnel Stage</th>
+                <th>Queued Applications</th>
+                <th>Compliance SLA</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (stg of personaData()?.verificationStaff?.stagesBreakdown || []; track stg.stage) {
+                <tr>
+                  <td class="font-bold">{{ stg.stage }}</td>
+                  <td class="font-mono font-medium">{{ stg.count }} Merchants</td>
+                  <td><span class="badge badge-warning">24h SLA</span></td>
+                  <td>
+                    <button type="button" class="admin-btn btn-secondary btn-sm" (click)="navigateTo('/merchant-verification')">
+                      Review Next
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- PERSONA VIEW 4: SUPPORT STAFF DASHBOARD (Screen #5) -->
+  @if (activePersona() === 'SUPPORT') {
+    <div class="persona-content animate-fade-in">
+      <div class="metrics-grid">
+        <admin-metric-card
+          title="Open Support Backlog"
+          [value]="(personaData()?.supportStaff?.openTicketsCount || 7).toString()"
+          delta="Active Queue"
+          deltaType="neutral"
+          period="customers & merchants"
+          icon="🎧"
+          [highlight]="true">
+        </admin-metric-card>
+        <admin-metric-card
+          title="Urgent P1 Blockers"
+          [value]="(personaData()?.supportStaff?.urgentP1TicketsCount || 2).toString()"
+          delta="Immediate Response"
+          deltaType="negative"
+          period="order fulfillment issues"
+          icon="🚨">
+        </admin-metric-card>
+        <admin-metric-card
+          title="Avg First Response Time"
+          [value]="(personaData()?.supportStaff?.avgFirstResponseTimeMinutes || 1.8) + ' mins'"
+          delta="Ultra Fast SLA"
+          deltaType="positive"
+          period="live chat & tickets"
+          icon="⚡">
+        </admin-metric-card>
+        <admin-metric-card
+          title="CSAT Satisfaction"
+          [value]="(personaData()?.supportStaff?.csatScore || 4.8) + ' / 5.0'"
+          delta="★ 98% Positive"
+          deltaType="positive"
+          period="customer ratings"
+          icon="⭐">
+        </admin-metric-card>
+      </div>
+
+      <div class="dashboard-card mt-3">
+        <div class="card-title-bar">
+          <h3>🎧 Support Queue Priority Distribution</h3>
+          <button type="button" class="admin-btn btn-primary btn-sm" (click)="navigateTo('/support-tickets')">
+            Open Support Tickets Queue →
+          </button>
+        </div>
+        <div class="card-body">
+          <div class="priority-badges-row">
+            <div class="priority-card urgent">
+              <span class="p-count">{{ personaData()?.supportStaff?.ticketsByPriority?.urgent || 2 }}</span>
+              <span class="p-lbl">P1 Urgent SLA</span>
             </div>
-          }
-        }
+            <div class="priority-card high">
+              <span class="p-count">{{ personaData()?.supportStaff?.ticketsByPriority?.high || 3 }}</span>
+              <span class="p-lbl">P2 High Priority</span>
+            </div>
+            <div class="priority-card normal">
+              <span class="p-count">{{ personaData()?.supportStaff?.ticketsByPriority?.normal || 2 }}</span>
+              <span class="p-lbl">P3 Normal Support</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
+  }
 
-  <!-- Live Orders Inspection Table -->
-  <div class="dashboard-card recent-orders-section">
-    <div class="card-title-bar">
-      <h3>⚡ Real-Time Live Orders Stream ({{ activeCityScopeName() }})</h3>
-      <button type="button" class="admin-btn btn-secondary btn-sm" (click)="navigateTo('/orders')">View All Orders →</button>
+  <!-- PERSONA VIEW 5: GLOBAL OPERATIONS (Screen #2) -->
+  @if (activePersona() === 'GLOBAL') {
+    <!-- City Scope Filter Toolbar (Root & Super Admin can switch; City Manager is locked) -->
+    @if (sessionService.isRoot() || sessionService.isSuperAdmin()) {
+      <div class="city-filter-toolbar">
+        <span class="filter-label">Municipal Jurisdiction:</span>
+        <div class="filter-pills">
+          <button 
+            type="button" 
+            class="city-pill" 
+            [class.active]="selectedCityFilter() === 'ALL'" 
+            (click)="setCityFilter('ALL')">
+            🌐 All Cities (Global Command)
+          </button>
+          <button 
+            type="button" 
+            class="city-pill" 
+            [class.active]="selectedCityFilter() === 'Nagpur'" 
+            (click)="setCityFilter('Nagpur')">
+            📍 Nagpur
+          </button>
+          <button 
+            type="button" 
+            class="city-pill" 
+            [class.active]="selectedCityFilter() === 'Akola'" 
+            (click)="setCityFilter('Akola')">
+            📍 Akola
+          </button>
+          <button 
+            type="button" 
+            class="city-pill" 
+            [class.active]="selectedCityFilter() === 'Amravati'" 
+            (click)="setCityFilter('Amravati')">
+            📍 Amravati
+          </button>
+          <button 
+            type="button" 
+            class="city-pill" 
+            [class.active]="selectedCityFilter() === 'Pune'" 
+            (click)="setCityFilter('Pune')">
+            📍 Pune
+          </button>
+        </div>
+      </div>
+    } @else if (sessionService.geoAssignment()) {
+      <div class="assigned-city-banner">
+        <span class="banner-icon">📍</span>
+        <span>Operating under <strong>{{ sessionService.geoAssignment()?.cityName }} Municipal Territory</strong> ({{ sessionService.geoAssignment()?.state }}) · Cross-city access isolated</span>
+      </div>
+    }
+
+    <!-- High-Level KPI Metric Tiles -->
+    <div class="metrics-grid">
+      <admin-metric-card
+        [title]="'Today\'s GMV (' + activeCityScopeName() + ')'"
+        [value]="metrics()?.todayGmv || '₹ 0.00'"
+        [delta]="metrics()?.todayGmvDelta || '+0%'"
+        deltaType="positive"
+        period="vs yesterday"
+        icon="💰"
+        [highlight]="true">
+      </admin-metric-card>
+
+      <admin-metric-card
+        title="Active Merchants"
+        [value]="(metrics()?.activeMerchants ?? 0).toString()"
+        [delta]="metrics()?.activeMerchantsDelta || '0 onboarding'"
+        deltaType="positive"
+        period="this week"
+        icon="🏬">
+      </admin-metric-card>
+
+      <admin-metric-card
+        title="In-Flight Orders"
+        [value]="(metrics()?.inFlightOrders ?? 0).toString()"
+        [delta]="metrics()?.inFlightOrdersAdherence || 'Adherence'"
+        deltaType="positive"
+        period="pickup adherence"
+        icon="🛍️">
+      </admin-metric-card>
+
+      <admin-metric-card
+        title="KYC Verification Queue"
+        [value]="(metrics()?.kycVerificationQueue ?? 0).toString()"
+        [delta]="metrics()?.kycQueueSla || 'SLA'"
+        deltaType="neutral"
+        period="compliance queue"
+        icon="🛡️">
+      </admin-metric-card>
+
+      <admin-metric-card
+        title="Pending Refunds"
+        [value]="(metrics()?.pendingRefunds ?? 0).toString()"
+        [delta]="metrics()?.pendingRefundsAmount || '₹ 0 total'"
+        deltaType="negative"
+        period="requires dual-sign"
+        icon="↩️">
+      </admin-metric-card>
+
+      <admin-metric-card
+        title="System Mesh P95 Latency"
+        [value]="metrics()?.meshLatency || '42 ms'"
+        [delta]="metrics()?.meshLatencyHealth || 'Healthy'"
+        deltaType="positive"
+        period="microservices"
+        icon="⚡">
+      </admin-metric-card>
     </div>
 
-    <admin-data-table
-      [columns]="orderTableColumns"
-      [data]="recentOrders()"
-      [totalCount]="recentOrders().length"
-      (rowClick)="onOrderRowClick($event)">
-    </admin-data-table>
-  </div>
+    <!-- Operational Focus Layout: 2 Columns -->
+    <div class="dashboard-split-grid">
+      <!-- Left Column: Locality Performance & Queue Pressure -->
+      <div class="dashboard-card">
+        <div class="card-title-bar">
+          <h3>📍 Locality Fulfillment Pressure ({{ activeCityScopeName() }})</h3>
+          <span class="badge badge-info">Live Stream</span>
+        </div>
+
+        <div class="locality-breakdown-list">
+          @if (localityFulfillment().length === 0) {
+            <div class="empty-state-hint">
+              <span>No localized fulfillment pressure reported in current jurisdiction.</span>
+            </div>
+          } @else {
+            @for (loc of localityFulfillment(); track loc.name) {
+              <div class="locality-row">
+                <div class="locality-info">
+                  <span class="locality-name">{{ loc.name }}</span>
+                  <span class="locality-stats">{{ loc.outlets }} Outlets · {{ loc.activeBatches }} Active Batches</span>
+                </div>
+                <div class="pressure-bar-container">
+                  <div class="pressure-fill" [ngClass]="loc.status" [style.width.%]="loc.pressure"></div>
+                </div>
+                <span class="pressure-label" [ngClass]="{ warning: loc.status === 'high' }">
+                  {{ loc.status | titlecase }} ({{ loc.pressure }}%)
+                </span>
+              </div>
+            }
+          }
+        </div>
+      </div>
+
+      <!-- Right Column: Priority Security & Operations Log -->
+      <div class="dashboard-card">
+        <div class="card-title-bar">
+          <h3>🚨 Priority Action Triage</h3>
+          <span class="badge badge-warning">Operator Action Required</span>
+        </div>
+
+        <div class="action-triage-list">
+          @if (actionTriage().length === 0) {
+            <div class="empty-state-hint">
+              <span>✓ No urgent operational blockers. System operating normally.</span>
+            </div>
+          } @else {
+            @for (item of actionTriage(); track item.id) {
+              <div class="triage-item" [ngClass]="item.severity">
+                <div class="triage-icon">
+                  {{ item.type === 'KYC' ? '🛡️' : item.type === 'REFUND' ? '↩️' : '📦' }}
+                </div>
+                <div class="triage-content">
+                  <span class="triage-title">{{ item.title }}</span>
+                  <span class="triage-meta">{{ item.meta }}</span>
+                </div>
+                <button 
+                  type="button"
+                  class="admin-btn btn-sm" 
+                  [ngClass]="item.severity === 'danger' ? 'btn-danger' : 'btn-secondary'" 
+                  (click)="navigateTo(item.route)">
+                  {{ item.type === 'KYC' ? 'Review' : item.type === 'REFUND' ? 'Authorize' : 'Inspect' }}
+                </button>
+              </div>
+            }
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Orders Inspection Table -->
+    <div class="dashboard-card recent-orders-section">
+      <div class="card-title-bar">
+        <h3>⚡ Real-Time Live Orders Stream ({{ activeCityScopeName() }})</h3>
+        <button type="button" class="admin-btn btn-secondary btn-sm" (click)="navigateTo('/orders')">View All Orders →</button>
+      </div>
+
+      <admin-data-table
+        [columns]="orderTableColumns"
+        [data]="recentOrders()"
+        [totalCount]="recentOrders().length"
+        (rowClick)="onOrderRowClick($event)">
+      </admin-data-table>
+    </div>
+  }
 </div>

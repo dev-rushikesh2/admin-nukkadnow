@@ -1,7 +1,7 @@
 <div class="orders-page-container">
   <admin-page-header
-    title="Live Orders Stream & Global Fulfillment"
-    [subtitle]="'Real-time order lifecycle tracking, pickup capacity slots, and safety interventions in ' + activeCityName()"
+    title="Global Orders Fulfillment & Scheduling"
+    [subtitle]="'Real-time order lifecycle tracking, QR counter POS, pre-orders scheduling, and capacity slots in ' + activeCityName()"
     breadcrumb="Console / Orders">
     <div actions>
       <div class="stream-pill">
@@ -11,6 +11,45 @@
       <button type="button" class="admin-btn btn-secondary btn-sm" (click)="loadOrders()">↻ Refresh</button>
     </div>
   </admin-page-header>
+
+  <!-- Module Sub-Tabs (Screens #52, #61, #62, #63, #59) -->
+  <div class="orders-sub-tabs">
+    <button
+      type="button"
+      class="subtab-btn"
+      [class.active]="activeTab() === 'STREAM'"
+      (click)="setTab('STREAM')">
+      🛍️ Live Orders Stream (#52)
+    </button>
+    <button
+      type="button"
+      class="subtab-btn"
+      [class.active]="activeTab() === 'QR_POS'"
+      (click)="setTab('QR_POS')">
+      📱 Counter QR POS (#61)
+    </button>
+    <button
+      type="button"
+      class="subtab-btn"
+      [class.active]="activeTab() === 'PRE_ORDERS'"
+      (click)="setTab('PRE_ORDERS')">
+      📅 Scheduled Pre-orders (#62)
+    </button>
+    <button
+      type="button"
+      class="subtab-btn"
+      [class.active]="activeTab() === 'CAPACITY'"
+      (click)="setTab('CAPACITY')">
+      ⏱️ Outlet Slot Capacity (#63)
+    </button>
+    <button
+      type="button"
+      class="subtab-btn"
+      [class.active]="activeTab() === 'DISPUTES'"
+      (click)="setTab('DISPUTES')">
+      ⚖️ Order Disputes (#59)
+    </button>
+  </div>
 
   <!-- City Scope Filter Bar (for Root & Super Admin) -->
   @if (sessionService.isRoot() || sessionService.isSuperAdmin()) {
@@ -30,35 +69,258 @@
     </div>
   }
 
-  <!-- Search & Status Filter Toolbar -->
-  <div class="orders-filter-bar">
-    <div class="search-box">
-      <span>🔍</span>
-      <input
-        type="text"
-        class="admin-input"
-        placeholder="Search order ID, merchant, customer, or token..."
-        [(ngModel)]="searchQuery"
-        (ngModelChange)="loadOrders()">
+  <!-- TAB 1: LIVE ORDERS STREAM (Screen #52) -->
+  @if (activeTab() === 'STREAM') {
+    <!-- Search & Status Filter Toolbar -->
+    <div class="orders-filter-bar">
+      <div class="search-box">
+        <span>🔍</span>
+        <input
+          type="text"
+          class="admin-input"
+          placeholder="Search order ID, merchant, customer, or token..."
+          [(ngModel)]="searchQuery"
+          (ngModelChange)="loadOrders()">
+      </div>
+
+      <div class="status-tabs">
+        <button type="button" class="tab-btn" [class.active]="selectedStatus === ''" (click)="filterStatus('')">All Orders ({{ totalCount() }})</button>
+        <button type="button" class="tab-btn" [class.active]="selectedStatus === 'IN_PREPARATION'" (click)="filterStatus('IN_PREPARATION')">In Prep</button>
+        <button type="button" class="tab-btn" [class.active]="selectedStatus === 'READY_FOR_PICKUP'" (click)="filterStatus('READY_FOR_PICKUP')">Ready for Pickup</button>
+        <button type="button" class="tab-btn" [class.active]="selectedStatus === 'COMPLETED'" (click)="filterStatus('COMPLETED')">Completed</button>
+        <button type="button" class="tab-btn" [class.active]="selectedStatus === 'FORCE_CANCELLED'" (click)="filterStatus('FORCE_CANCELLED')">Cancelled / Intervened</button>
+      </div>
     </div>
 
-    <div class="status-tabs">
-      <button type="button" class="tab-btn" [class.active]="selectedStatus === ''" (click)="filterStatus('')">All Orders ({{ totalCount() }})</button>
-      <button type="button" class="tab-btn" [class.active]="selectedStatus === 'IN_PREPARATION'" (click)="filterStatus('IN_PREPARATION')">In Prep</button>
-      <button type="button" class="tab-btn" [class.active]="selectedStatus === 'READY_FOR_PICKUP'" (click)="filterStatus('READY_FOR_PICKUP')">Ready for Pickup</button>
-      <button type="button" class="tab-btn" [class.active]="selectedStatus === 'COMPLETED'" (click)="filterStatus('COMPLETED')">Completed</button>
-      <button type="button" class="tab-btn" [class.active]="selectedStatus === 'FORCE_CANCELLED'" (click)="filterStatus('FORCE_CANCELLED')">Cancelled / Intervened</button>
+    <!-- Table Card -->
+    <div class="table-card">
+      <admin-data-table
+        [columns]="tableColumns"
+        [data]="orders()"
+        [totalCount]="totalCount()"
+        [loading]="loading()"
+        (rowClick)="onRowClick($event)">
+      </admin-data-table>
     </div>
-  </div>
+  }
 
-  <!-- Table Card -->
-  <div class="table-card">
-    <admin-data-table
-      [columns]="tableColumns"
-      [data]="orders()"
-      [totalCount]="totalCount()"
-      [loading]="loading()"
-      (rowClick)="onRowClick($event)">
-    </admin-data-table>
-  </div>
+  <!-- TAB 2: QR COUNTER POS MONITORING (Screen #61) -->
+  @if (activeTab() === 'QR_POS') {
+    <div class="table-card">
+      <div class="card-header-bar">
+        <div>
+          <h3>Storefront QR Counter POS & Instant Token Throughput</h3>
+          <p>Real-time telemetry of orders placed at merchant store counters via dynamic printed QR stands.</p>
+        </div>
+      </div>
+
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Order Ref</th>
+            <th>Counter / Station</th>
+            <th>Pickup Token</th>
+            <th>Merchant Outlet</th>
+            <th>City</th>
+            <th>Amount (₹)</th>
+            <th>Items</th>
+            <th>Status</th>
+            <th>QR Scanned At</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (qr of qrOrders(); track qr.id) {
+            <tr>
+              <td class="font-mono font-medium">{{ qr.orderNumber }}</td>
+              <td class="font-mono text-xs">{{ qr.counterId }}</td>
+              <td><span class="token-pill">{{ qr.tokenNumber }}</span></td>
+              <td>
+                <div class="font-medium">{{ qr.outletName }}</div>
+                <div class="text-muted text-xs">{{ qr.merchantName }}</div>
+              </td>
+              <td><admin-badge variant="neutral">📍 {{ qr.city }}</admin-badge></td>
+              <td class="font-bold">₹{{ qr.amount }}</td>
+              <td>{{ qr.itemsCount }} items</td>
+              <td>
+                @if (qr.status === 'VERIFIED_PICKED_UP') {
+                  <admin-badge variant="success">Verified & Fulfilled</admin-badge>
+                } @else {
+                  <admin-badge variant="warning">Waiting at Counter</admin-badge>
+                }
+              </td>
+              <td class="font-mono text-muted text-xs">{{ qr.qrGeneratedAt | date:'shortTime' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- TAB 3: PRE-ORDERS & SCHEDULED PICKUPS (Screen #62) -->
+  @if (activeTab() === 'PRE_ORDERS') {
+    <div class="table-card">
+      <div class="card-header-bar">
+        <div>
+          <h3>Scheduled Pre-orders & Advance Booking Calendar</h3>
+          <p>Customer orders booked for upcoming calendar days, festive faral preparations, and bulk sweet boxes.</p>
+        </div>
+      </div>
+
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Pre-order ID</th>
+            <th>Scheduled Pickup Date & Window</th>
+            <th>Customer</th>
+            <th>Merchant Store</th>
+            <th>City</th>
+            <th>Items & Notes</th>
+            <th>Amount (₹)</th>
+            <th>State</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (pre of preOrders(); track pre.id) {
+            <tr>
+              <td class="font-mono font-medium">{{ pre.orderNumber }}</td>
+              <td>
+                <div class="font-bold">📅 {{ pre.scheduledDate }}</div>
+                <div class="text-muted text-xs">⏰ {{ pre.scheduledSlot }}</div>
+              </td>
+              <td class="font-medium">{{ pre.customerName }}</td>
+              <td>
+                <div class="font-medium">{{ pre.outletName }}</div>
+                <div class="text-muted text-xs">{{ pre.merchantName }}</div>
+              </td>
+              <td><admin-badge variant="neutral">📍 {{ pre.city }}</admin-badge></td>
+              <td>
+                <div class="font-medium">{{ pre.itemsCount }} items</div>
+                <div class="text-muted text-xs">{{ pre.notes }}</div>
+              </td>
+              <td class="font-bold">₹{{ pre.amount }}</td>
+              <td>
+                <admin-badge variant="info">{{ pre.status }}</admin-badge>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- TAB 4: OUTLET CAPACITY SLOTS & THROTTLING (Screen #63) -->
+  @if (activeTab() === 'CAPACITY') {
+    <div class="table-card">
+      <div class="card-header-bar">
+        <div>
+          <h3>Storefront Hourly Slot Capacity & Demand Throttling</h3>
+          <p>Real-time capacity utilization meters. Emergency throttles limit new order acceptance when store staff is saturated.</p>
+        </div>
+      </div>
+
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Store Outlet</th>
+            <th>Territory</th>
+            <th>Hourly Limit</th>
+            <th>Current Intake</th>
+            <th>Utilization</th>
+            <th>Status</th>
+            <th>Emergency Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (capacityData()?.outlets; as outlets) {
+            @for (out of outlets; track out.id) {
+              <tr>
+                <td>
+                  <div class="font-bold">{{ out.storeName }}</div>
+                  <div class="text-muted text-xs">{{ out.merchantName }} · {{ out.locality }}</div>
+                </td>
+                <td><admin-badge variant="neutral">📍 {{ out.city }}</admin-badge></td>
+                <td class="font-mono font-medium">{{ out.hourlyCapacity }} orders/hr</td>
+                <td class="font-mono font-bold">{{ out.currentHourlyOrders }} orders</td>
+                <td>
+                  <div class="capacity-meter">
+                    <div class="meter-bar" [style.width.%]="out.capacityUtilizationPct" [class.high]="out.capacityUtilizationPct >= 80"></div>
+                    <span class="meter-text font-mono">{{ out.capacityUtilizationPct }}%</span>
+                  </div>
+                </td>
+                <td>
+                  @if (out.isThrottled) {
+                    <admin-badge variant="danger">Throttled (Paused)</admin-badge>
+                  } @else if (out.status === 'OPEN') {
+                    <admin-badge variant="success">Open (Normal)</admin-badge>
+                  } @else {
+                    <admin-badge variant="warning">{{ out.status }}</admin-badge>
+                  }
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    class="admin-btn btn-sm"
+                    [class.btn-danger]="!out.isThrottled"
+                    [class.btn-success]="out.isThrottled"
+                    (click)="toggleThrottle(out.id, out.isThrottled)">
+                    {{ out.isThrottled ? 'Release Throttle' : 'Throttle Intake' }}
+                  </button>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- TAB 5: ORDER DISPUTES QUEUE (Screen #59) -->
+  @if (activeTab() === 'DISPUTES') {
+    <div class="table-card">
+      <div class="card-header-bar">
+        <div>
+          <h3>Customer / Merchant Order Disputes & Escrow Freeze</h3>
+          <p>Orders flagged for investigation. Escrow payouts are frozen until resolution.</p>
+        </div>
+      </div>
+
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Dispute Ref</th>
+            <th>Order Ref</th>
+            <th>Customer</th>
+            <th>Merchant Store</th>
+            <th>City</th>
+            <th>Claim Reason</th>
+            <th>Claim Amount</th>
+            <th>Escrow Status</th>
+            <th>Dispute State</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (disp of disputes(); track disp.disputeId) {
+            <tr>
+              <td class="font-mono font-bold">{{ disp.disputeId }}</td>
+              <td class="font-mono font-medium">#{{ disp.orderNumber }}</td>
+              <td class="font-medium">{{ disp.customerName }}</td>
+              <td>
+                <div class="font-medium">{{ disp.outletName }}</div>
+                <div class="text-muted text-xs">{{ disp.merchantName }}</div>
+              </td>
+              <td><admin-badge variant="neutral">📍 {{ disp.city }}</admin-badge></td>
+              <td>{{ disp.disputeReason }}</td>
+              <td class="font-bold text-danger">₹{{ disp.claimAmountRupees }}</td>
+              <td>
+                <span class="escrow-locked-tag">🔒 Escrow Frozen</span>
+              </td>
+              <td>
+                <admin-badge variant="warning">{{ disp.status }}</admin-badge>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
 </div>

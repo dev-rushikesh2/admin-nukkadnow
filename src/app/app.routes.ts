@@ -38,6 +38,13 @@ export const routes: Routes = [
           import('./features/merchants/merchants.routes').then((m) => m.merchantsRoutes),
       },
       {
+        path: 'customers',
+        canActivate: [adminPermissionGuard],
+        data: { requiredPermissions: [AdminPermissions.SUPPORT_READ] },
+        loadChildren: () =>
+          import('./features/customers/customers.routes').then((m) => m.customersRoutes),
+      },
+      {
         path: 'merchant-verification',
         canActivate: [adminPermissionGuard],
         data: { requiredPermissions: [AdminPermissions.KYC_READ] },
@@ -74,6 +81,15 @@ export const routes: Routes = [
         loadChildren: () =>
           import('./features/catalogue-moderation/catalogue-moderation.routes').then(
             (m) => m.catalogueModerationRoutes
+          ),
+      },
+      {
+        path: 'inventory-monitoring',
+        canActivate: [adminPermissionGuard],
+        data: { requiredPermissions: [AdminPermissions.CATALOG_READ] },
+        loadChildren: () =>
+          import('./features/inventory-monitoring/inventory-monitoring.routes').then(
+            (m) => m.inventoryMonitoringRoutes
           ),
       },
       {
@@ -200,6 +216,11 @@ export const routes: Routes = [
         data: { requiredPermissions: [AdminPermissions.SETTINGS_MANAGE] },
         loadChildren: () =>
           import('./features/settings/settings.routes').then((m) => m.settingsRoutes),
+      },
+      {
+        path: 'profile',
+        loadChildren: () =>
+          import('./features/profile/profile.routes').then((m) => m.profileRoutes),
       },
     ],
   },

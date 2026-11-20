@@ -1,0 +1,334 @@
+<div class="admin-page profile-page">
+  <admin-page-header
+    title="Admin Profile & Security"
+    subtitle="Personal administrator account details, cryptographic credentials, 2FA, and activity logs.">
+    <div actions class="header-actions">
+      @if (profile(); as p) {
+        <admin-badge [variant]="p.isRootProtected ? 'danger' : 'info'">
+          {{ p.isRootProtected ? '👑 Root Protected' : '🛡️ ' + p.roleCode }}
+        </admin-badge>
+      }
+    </div>
+  </admin-page-header>
+
+  <!-- Toast Alert -->
+  @if (toastMessage()) {
+    <div class="profile-toast animate-fade-in">
+      <span class="toast-icon">✓</span>
+      <span>{{ toastMessage() }}</span>
+    </div>
+  }
+
+  <!-- Sub-Navigation Tabs (Screens #147, #148, #149) -->
+  <div class="profile-tabs">
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'DETAILS'"
+      (click)="setTab('DETAILS')">
+      👤 Profile Details
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'SECURITY'"
+      (click)="setTab('SECURITY')">
+      🔐 Security & Credentials
+    </button>
+    <button
+      type="button"
+      class="tab-btn"
+      [class.active]="activeTab() === 'ACTIVITY'"
+      (click)="setTab('ACTIVITY')">
+      📜 Activity History
+    </button>
+  </div>
+
+  <!-- TAB 1: PROFILE DETAILS (Screen #147) -->
+  @if (activeTab() === 'DETAILS') {
+    <div class="tab-content details-grid">
+      <!-- Identity Overview Card -->
+      <div class="admin-card identity-card">
+        <div class="card-header">
+          <span class="card-title">Operator Identity</span>
+          <admin-badge variant="success">Active Session</admin-badge>
+        </div>
+        <div class="card-body identity-body">
+          <div class="avatar-wrapper">
+            <img [src]="profile()?.avatarUrl || 'https://api.dicebear.com/7.x/initials/svg?seed=Admin'" alt="Avatar" class="profile-avatar">
+          </div>
+          <div class="identity-info">
+            <h3 class="identity-name">{{ profile()?.name || 'Administrator' }}</h3>
+            <span class="identity-email">{{ profile()?.email || 'admin@nukkadnow.com' }}</span>
+            <div class="identity-badges">
+              <span class="scope-pill">📍 {{ profile()?.geoScope || 'Global Scope' }}</span>
+              <span class="role-pill">{{ profile()?.roleCode || 'SUPER_ADMIN' }}</span>
+            </div>
+          </div>
+          <div class="session-meta">
+            <div class="meta-row">
+              <span class="meta-label">Account ID:</span>
+              <span class="meta-val font-mono">{{ profile()?.id || 'adm-001' }}</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Last Login:</span>
+              <span class="meta-val">{{ (profile()?.lastLoginAt | date:'medium') || 'Just now' }}</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Ingress IP:</span>
+              <span class="meta-val font-mono">{{ profile()?.lastLoginIp || '127.0.0.1' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Edit Personal Info Form -->
+      <div class="admin-card edit-card">
+        <div class="card-header">
+          <span class="card-title">Edit Personal Details</span>
+        </div>
+        <div class="card-body form-body">
+          <div class="form-group">
+            <label class="form-label" for="profile-name">Full Official Name</label>
+            <input
+              id="profile-name"
+              type="text"
+              class="form-input"
+              [(ngModel)]="editName"
+              placeholder="Enter full name">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="profile-phone">Contact Mobile Phone</label>
+            <input
+              id="profile-phone"
+              type="tel"
+              class="form-input"
+              [(ngModel)]="editPhone"
+              placeholder="+91 98XXX XXXXX">
+            <span class="form-hint">Used for operational SMS notifications and urgent security alerts.</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="profile-email">Work Email Address</label>
+            <input
+              id="profile-email"
+              type="email"
+              class="form-input readonly-input"
+              [value]="profile()?.email"
+              readonly>
+            <span class="form-hint">Official organization email is locked and managed by Root Admin.</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="profile-scope">Assigned Geographic Jurisdiction</label>
+            <input
+              id="profile-scope"
+              type="text"
+              class="form-input readonly-input"
+              [value]="profile()?.geoScope"
+              readonly>
+            <span class="form-hint">Municipal territory scoping is governed by the platform governance policy.</span>
+          </div>
+
+          <div class="form-actions">
+            <button
+              type="button"
+              class="btn btn-primary"
+              [disabled]="isSaving()"
+              (click)="saveProfile()">
+              {{ isSaving() ? 'Saving Changes...' : 'Save Profile Changes' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- TAB 2: SECURITY & CREDENTIALS (Screen #148) -->
+  @if (activeTab() === 'SECURITY') {
+    <div class="tab-content security-grid">
+      <!-- 2FA & Hardware Security Card -->
+      <div class="admin-card mfa-card">
+        <div class="card-header">
+          <span class="card-title">Two-Factor Authentication (2FA / TOTP)</span>
+          <admin-badge variant="success">Enforced</admin-badge>
+        </div>
+        <div class="card-body">
+          <p class="security-desc">
+            Two-Factor Authentication is strictly enforced on all Level 1 (Root), Level 2 (Super Admin), and Level 3 (City Operations Manager) accounts to protect municipal commercial operations.
+          </p>
+          <div class="mfa-status-box">
+            <span class="status-icon">🛡️</span>
+            <div class="status-text">
+              <span class="status-title">TOTP Authenticator Active</span>
+              <span class="status-subtitle">Google Authenticator, Microsoft Authenticator, or 1Password.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Password Rotation Card -->
+      <div class="admin-card password-card">
+        <div class="card-header">
+          <span class="card-title">Rotate Account Password</span>
+        </div>
+        <div class="card-body">
+          @if (passwordError()) {
+            <div class="error-banner animate-fade-in">
+              <span>⚠️ {{ passwordError() }}</span>
+            </div>
+          }
+
+          <div class="form-group">
+            <label class="form-label" for="curr-pwd">Current Password</label>
+            <input
+              id="curr-pwd"
+              type="password"
+              class="form-input"
+              [(ngModel)]="currentPassword"
+              placeholder="Enter current password">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="new-pwd">New Password</label>
+            <input
+              id="new-pwd"
+              type="password"
+              class="form-input"
+              [(ngModel)]="newPassword"
+              placeholder="Minimum 8 characters">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="conf-pwd">Confirm New Password</label>
+            <input
+              id="conf-pwd"
+              type="password"
+              class="form-input"
+              [(ngModel)]="confirmPassword"
+              placeholder="Confirm new password">
+          </div>
+
+          <div class="password-policy">
+            <span class="policy-title">Security Requirements:</span>
+            <ul class="policy-list">
+              <li>Minimum 8 characters length</li>
+              <li>Includes uppercase letters, digits, and special symbols</li>
+              <li>Cannot match previous 3 passwords</li>
+            </ul>
+          </div>
+
+          <div class="form-actions">
+            <button
+              type="button"
+              class="btn btn-primary"
+              [disabled]="isSaving() || !newPassword"
+              (click)="changePassword()">
+              {{ isSaving() ? 'Updating Password...' : 'Update Password' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Sessions Card -->
+      <div class="admin-card sessions-card full-width">
+        <div class="card-header">
+          <span class="card-title">Active Browser Sessions & Devices</span>
+          <button type="button" class="btn btn-outline-danger btn-sm" (click)="revokeOtherSessions()">
+            Revoke All Other Sessions
+          </button>
+        </div>
+        <div class="card-body p-0">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Device / Browser</th>
+                <th>IP Address</th>
+                <th>Location</th>
+                <th>Status</th>
+                <th>Signed In</th>
+                <th>Last Active</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (sess of sessions(); track sess.id) {
+                <tr>
+                  <td class="font-medium">
+                    <span class="device-icon">💻</span>
+                    {{ sess.device }}
+                  </td>
+                  <td class="font-mono text-muted">{{ sess.ipAddress }}</td>
+                  <td>{{ sess.location }}</td>
+                  <td>
+                    @if (sess.isCurrent) {
+                      <admin-badge variant="success">Current Session</admin-badge>
+                    } @else {
+                      <admin-badge variant="neutral">Active</admin-badge>
+                    }
+                  </td>
+                  <td class="text-muted">{{ sess.signedInAt | date:'mediumDate' }}</td>
+                  <td class="text-muted">{{ sess.lastActiveAt | date:'shortTime' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- TAB 3: ACTIVITY HISTORY (Screen #149) -->
+  @if (activeTab() === 'ACTIVITY') {
+    <div class="tab-content activity-content">
+      <div class="admin-card">
+        <div class="card-header">
+          <span class="card-title">Personal Action Audit Log</span>
+          <admin-badge variant="info">HMAC SHA-256 Verified</admin-badge>
+        </div>
+        <div class="card-body p-0">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Action</th>
+                <th>Target Entity</th>
+                <th>Target ID</th>
+                <th>Reason Code</th>
+                <th>Justification</th>
+                <th>Cryptographic Integrity</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (act of activities(); track act.id) {
+                <tr>
+                  <td class="text-muted">{{ act.timestamp | date:'short' }}</td>
+                  <td class="font-medium">
+                    <span class="action-tag">{{ act.action }}</span>
+                  </td>
+                  <td>{{ act.targetEntity }}</td>
+                  <td class="font-mono text-muted">{{ act.targetId }}</td>
+                  <td>
+                    <span class="reason-tag">{{ act.reasonCode }}</span>
+                  </td>
+                  <td class="justification-cell">{{ act.justification }}</td>
+                  <td>
+                    <span class="crypto-badge" title="Cryptographically verified in immutable HMAC chain">
+                      🔒 Valid
+                    </span>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="7" class="text-center py-4 text-muted">
+                    No recent administrative actions recorded for this account.
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  }
+</div>

@@ -76,6 +76,10 @@ export class OverviewListPageComponent implements OnInit {
   readonly isLoading = signal<boolean>(false);
   readonly selectedCityFilter = signal<string>('ALL');
 
+  // Persona Dashboard State (Screens #1, #2, #3, #4, #5)
+  readonly activePersona = signal<'GLOBAL' | 'ROOT' | 'CITY_OPS' | 'VERIFICATION' | 'SUPPORT'>('GLOBAL');
+  readonly personaData = signal<any>(null);
+
   readonly activeCityScopeName = computed(() => {
     const geo = this.sessionService.geoAssignment();
     if (geo?.cityName) {
@@ -99,7 +103,38 @@ export class OverviewListPageComponent implements OnInit {
     if (geo?.cityName) {
       this.selectedCityFilter.set(geo.cityName);
     }
+
+    // Role-tailored default persona dashboard
+    const role = this.sessionService.currentRole();
+    if (role === 'ROOT_ADMIN') {
+      this.activePersona.set('ROOT');
+    } else if (role === 'CITY_OPERATIONS_MANAGER') {
+      this.activePersona.set('CITY_OPS');
+    } else if (role === 'VERIFICATION_STAFF') {
+      this.activePersona.set('VERIFICATION');
+    } else if (role === 'SUPPORT_STAFF') {
+      this.activePersona.set('SUPPORT');
+    } else {
+      this.activePersona.set('GLOBAL');
+    }
+
     this.refreshMetrics();
+    this.loadPersonaData();
+  }
+
+  setPersona(persona: 'GLOBAL' | 'ROOT' | 'CITY_OPS' | 'VERIFICATION' | 'SUPPORT'): void {
+    this.activePersona.set(persona);
+  }
+
+  loadPersonaData(): void {
+    this.api.get<any>(AdminEndpoints.OVERVIEW_PERSONAS).subscribe({
+      next: (res) => {
+        if (res.data) {
+          this.personaData.set(res.data);
+          this.cdr.markForCheck();
+        }
+      }
+    });
   }
 
   setCityFilter(city: string): void {

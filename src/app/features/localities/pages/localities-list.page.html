@@ -1,8 +1,8 @@
 <div class="localities-page-container">
   <admin-page-header
-    [title]="'Localities & Delivery Zones — ' + (sessionService.geoAssignment()?.cityName || (selectedCity() === 'ALL' ? 'Global Grid' : selectedCity()))"
-    subtitle="Manage hyper-local micro-market boundaries, delivery radiuses, and live order congestion"
-    breadcrumb="Console / Localities & Delivery Zones">
+    [title]="'Geographic & Location Management — ' + (sessionService.geoAssignment()?.cityName || (selectedCity() === 'ALL' ? 'Global Grid' : selectedCity()))"
+    subtitle="Manage countries, states, districts, hyper-local micro-market geofences, and GIS GeoJSON imports."
+    breadcrumb="Console / Geographic & Location Management">
     <div actions>
       <button type="button" class="admin-btn btn-secondary btn-sm" (click)="refresh()">↻ Refresh</button>
       <button type="button" class="admin-btn btn-secondary btn-sm" (click)="exportCsv()">Export CSV</button>
@@ -10,81 +10,295 @@
     </div>
   </admin-page-header>
 
-  <!-- City Scope Selection -->
-  @if (sessionService.isRoot() || sessionService.isSuperAdmin()) {
-    <div class="territory-filter-bar">
-      <span class="bar-lbl">Territory Filter:</span>
-      <div class="city-pills">
-        <button type="button" class="cpill" [class.active]="selectedCity() === 'ALL'" (click)="onCityChange('ALL')">All Cities (Global)</button>
-        <button type="button" class="cpill" [class.active]="selectedCity() === 'Nagpur'" (click)="onCityChange('Nagpur')">📍 Nagpur</button>
-        <button type="button" class="cpill" [class.active]="selectedCity() === 'Akola'" (click)="onCityChange('Akola')">📍 Akola</button>
-        <button type="button" class="cpill" [class.active]="selectedCity() === 'Amravati'" (click)="onCityChange('Amravati')">📍 Amravati</button>
-        <button type="button" class="cpill" [class.active]="selectedCity() === 'Pune'" (click)="onCityChange('Pune')">📍 Pune</button>
+  <!-- Geographic Module Sub-Tabs (Screens #20, #21, #22, #24, #28) -->
+  <div class="geo-sub-tabs">
+    <button
+      type="button"
+      class="subtab-btn"
+      [class.active]="activeSubTab() === 'LOCALITIES'"
+      (click)="setSubTab('LOCALITIES')">
+      🗺️ Localities & Zones
+    </button>
+    <button
+      type="button"
+      class="subtab-btn"
+      [class.active]="activeSubTab() === 'DISTRICTS'"
+      (click)="setSubTab('DISTRICTS')">
+      🏛️ Districts
+    </button>
+    <button
+      type="button"
+      class="subtab-btn"
+      [class.active]="activeSubTab() === 'STATES'"
+      (click)="setSubTab('STATES')">
+      📍 States & Tax Zones
+    </button>
+    <button
+      type="button"
+      class="subtab-btn"
+      [class.active]="activeSubTab() === 'COUNTRIES'"
+      (click)="setSubTab('COUNTRIES')">
+      🌐 Countries & Currencies
+    </button>
+    <button
+      type="button"
+      class="subtab-btn"
+      [class.active]="activeSubTab() === 'GEOJSON_IMPORT'"
+      (click)="setSubTab('GEOJSON_IMPORT')">
+      📤 GIS GeoJSON Bulk Import
+    </button>
+  </div>
+
+  <!-- TAB 1: LOCALITIES & ZONES (Screens #24, #25, #26) -->
+  @if (activeSubTab() === 'LOCALITIES') {
+    <!-- City Scope Selection -->
+    @if (sessionService.isRoot() || sessionService.isSuperAdmin()) {
+      <div class="territory-filter-bar">
+        <span class="bar-lbl">Territory Filter:</span>
+        <div class="city-pills">
+          <button type="button" class="cpill" [class.active]="selectedCity() === 'ALL'" (click)="onCityChange('ALL')">All Cities (Global)</button>
+          <button type="button" class="cpill" [class.active]="selectedCity() === 'Nagpur'" (click)="onCityChange('Nagpur')">📍 Nagpur</button>
+          <button type="button" class="cpill" [class.active]="selectedCity() === 'Akola'" (click)="onCityChange('Akola')">📍 Akola</button>
+          <button type="button" class="cpill" [class.active]="selectedCity() === 'Amravati'" (click)="onCityChange('Amravati')">📍 Amravati</button>
+          <button type="button" class="cpill" [class.active]="selectedCity() === 'Pune'" (click)="onCityChange('Pune')">📍 Pune</button>
+        </div>
+      </div>
+    } @else if (sessionService.geoAssignment()) {
+      <div class="geo-locked-banner">
+        <span>📍 Delivery zones and polygon radiuses scoped strictly to <strong>{{ sessionService.geoAssignment()?.cityName }} Municipal Territory</strong></span>
+      </div>
+    }
+
+    <!-- Summary Metric Chips -->
+    <div class="localities-metrics-row">
+      <div class="lmetric-chip blue">
+        <span class="lmetric-val">{{ totalLocalitiesCount() }}</span>
+        <span class="lmetric-lbl">Total Micro-Markets</span>
+      </div>
+      <div class="lmetric-chip green">
+        <span class="lmetric-val">{{ activeGeofencesCount() }}</span>
+        <span class="lmetric-lbl">Active Polygons</span>
+      </div>
+      <div class="lmetric-chip purple">
+        <span class="lmetric-val">{{ coveredPincodesCount() }}</span>
+        <span class="lmetric-lbl">Covered Pincodes</span>
+      </div>
+      <div class="lmetric-chip amber">
+        <span class="lmetric-val">{{ avgDeliveryRadius() }} km</span>
+        <span class="lmetric-lbl">Avg Delivery Radius</span>
       </div>
     </div>
-  } @else if (sessionService.geoAssignment()) {
-    <div class="geo-locked-banner">
-      <span>📍 Delivery zones and polygon radiuses scoped strictly to <strong>{{ sessionService.geoAssignment()?.cityName }} Municipal Territory</strong></span>
+
+    <!-- Operational Filter Toolbar -->
+    <div class="filter-toolbar">
+      <div class="status-tabs">
+        <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'ALL'" (click)="onStatusChange('ALL')">
+          All Zones ({{ store.items().length }})
+        </button>
+        <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'ACTIVE'" (click)="onStatusChange('ACTIVE')">
+          Active Service
+        </button>
+        <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'CONGESTED'" (click)="onStatusChange('CONGESTED')">
+          High Congestion
+        </button>
+        <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'MAINTENANCE'" (click)="onStatusChange('MAINTENANCE')">
+          Maintenance
+        </button>
+      </div>
+
+      <div class="search-box">
+        <input
+          type="search"
+          placeholder="Filter by locality name or pincode..."
+          [value]="searchQuery()"
+          (input)="onSearchChange($event)"
+          class="search-input" />
+      </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="table-container">
+      <admin-data-table
+        [columns]="tableColumns"
+        [data]="filteredLocalities()"
+        [totalCount]="filteredLocalities().length"
+        [loading]="store.loading()"
+        (rowClick)="onRowClick($event)">
+      </admin-data-table>
     </div>
   }
 
-  <!-- Summary Metric Chips -->
-  <div class="localities-metrics-row">
-    <div class="lmetric-chip blue">
-      <span class="lmetric-val">{{ totalLocalitiesCount() }}</span>
-      <span class="lmetric-lbl">Total Micro-Markets</span>
+  <!-- TAB 2: DISTRICTS (Screen #22) -->
+  @if (activeSubTab() === 'DISTRICTS') {
+    <div class="tab-content geo-tab-panel">
+      <div class="admin-card">
+        <div class="card-header">
+          <span class="card-title">Administrative Districts Management</span>
+          <admin-badge variant="info">State: Maharashtra (IN-MH)</admin-badge>
+        </div>
+        <div class="card-body p-0">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>District Code</th>
+                <th>District Name</th>
+                <th>Headquarters</th>
+                <th>State Code</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (dist of districtsList(); track dist.code) {
+                <tr>
+                  <td class="font-mono font-bold">{{ dist.code }}</td>
+                  <td class="font-medium">{{ dist.name }}</td>
+                  <td>{{ dist.headquarters }}</td>
+                  <td class="font-mono text-muted">{{ dist.stateCode }}</td>
+                  <td>
+                    <admin-badge variant="success">{{ dist.status }}</admin-badge>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
-    <div class="lmetric-chip green">
-      <span class="lmetric-val">{{ activeGeofencesCount() }}</span>
-      <span class="lmetric-lbl">Active Polygons</span>
-    </div>
-    <div class="lmetric-chip purple">
-      <span class="lmetric-val">{{ coveredPincodesCount() }}</span>
-      <span class="lmetric-lbl">Covered Pincodes</span>
-    </div>
-    <div class="lmetric-chip amber">
-      <span class="lmetric-val">{{ avgDeliveryRadius() }} km</span>
-      <span class="lmetric-lbl">Avg Delivery Radius</span>
-    </div>
-  </div>
+  }
 
-  <!-- Operational Filter Toolbar -->
-  <div class="filter-toolbar">
-    <div class="status-tabs">
-      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'ALL'" (click)="onStatusChange('ALL')">
-        All Zones ({{ store.items().length }})
-      </button>
-      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'ACTIVE'" (click)="onStatusChange('ACTIVE')">
-        Active Service
-      </button>
-      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'CONGESTED'" (click)="onStatusChange('CONGESTED')">
-        High Congestion
-      </button>
-      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'MAINTENANCE'" (click)="onStatusChange('MAINTENANCE')">
-        Maintenance
-      </button>
+  <!-- TAB 3: STATES (Screen #21) -->
+  @if (activeSubTab() === 'STATES') {
+    <div class="tab-content geo-tab-panel">
+      <div class="admin-card">
+        <div class="card-header">
+          <span class="card-title">Supported States & Tax Jurisdictions</span>
+          <admin-badge variant="info">Country: India (IN)</admin-badge>
+        </div>
+        <div class="card-body p-0">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>State Code</th>
+                <th>State Name</th>
+                <th>GST State Code</th>
+                <th>Country Code</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (st of statesList(); track st.code) {
+                <tr>
+                  <td class="font-mono font-bold">{{ st.code }}</td>
+                  <td class="font-medium">{{ st.name }}</td>
+                  <td class="font-mono">{{ st.gstStateCode }}</td>
+                  <td class="font-mono text-muted">{{ st.countryCode }}</td>
+                  <td>
+                    <admin-badge variant="success">{{ st.status }}</admin-badge>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
+  }
 
-    <div class="search-box">
-      <input
-        type="search"
-        placeholder="Filter by locality name or pincode..."
-        [value]="searchQuery()"
-        (input)="onSearchChange($event)"
-        class="search-input" />
+  <!-- TAB 4: COUNTRIES (Screen #20) -->
+  @if (activeSubTab() === 'COUNTRIES') {
+    <div class="tab-content geo-tab-panel">
+      <div class="admin-card">
+        <div class="card-header">
+          <span class="card-title">Supported Countries & Global Currency Baseline</span>
+        </div>
+        <div class="card-body p-0">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Country Code</th>
+                <th>Country Name</th>
+                <th>Base Currency</th>
+                <th>Calling Code</th>
+                <th>Default Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (c of countriesList(); track c.code) {
+                <tr>
+                  <td class="font-mono font-bold">{{ c.code }}</td>
+                  <td class="font-medium">🇮🇳 {{ c.name }}</td>
+                  <td class="font-mono">{{ c.currency }} (Indian Rupee)</td>
+                  <td class="font-mono">{{ c.phoneCode }}</td>
+                  <td>
+                    <admin-badge variant="success">Primary Operating Market</admin-badge>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
-  </div>
+  }
 
-  <!-- Data Table -->
-  <div class="table-container">
-    <admin-data-table
-      [columns]="tableColumns"
-      [data]="filteredLocalities()"
-      [totalCount]="filteredLocalities().length"
-      [loading]="store.loading()"
-      (rowClick)="onRowClick($event)">
-    </admin-data-table>
-  </div>
+  <!-- TAB 5: GEOJSON BULK IMPORT (Screen #28) -->
+  @if (activeSubTab() === 'GEOJSON_IMPORT') {
+    <div class="tab-content geo-tab-panel">
+      <div class="admin-card geo-import-card">
+        <div class="card-header">
+          <div>
+            <span class="card-title">GIS GeoJSON FeatureCollection Bulk Import</span>
+            <p class="card-subtitle">Batch import polygon coordinates and delivery radiuses for new municipal territories</p>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" (click)="loadSampleGeoJson()">
+            Load Sample GeoJSON
+          </button>
+        </div>
+        <div class="card-body">
+          @if (importSuccessMessage()) {
+            <div class="alert-box success animate-fade-in">
+              <span>✓ {{ importSuccessMessage() }}</span>
+            </div>
+          }
+          @if (importErrorMessage()) {
+            <div class="alert-box danger animate-fade-in">
+              <span>⚠️ {{ importErrorMessage() }}</span>
+            </div>
+          }
+
+          <div class="form-group mb-3">
+            <label class="form-label">Target Municipal City *</label>
+            <select class="form-control" [(ngModel)]="importCityCode">
+              <option value="IN-MH-NGP">📍 Nagpur (IN-MH-NGP)</option>
+              <option value="IN-MH-AKL">📍 Akola (IN-MH-AKL)</option>
+              <option value="IN-MH-AMR">📍 Amravati (IN-MH-AMR)</option>
+              <option value="IN-MH-PUN">📍 Pune (IN-MH-PUN)</option>
+            </select>
+          </div>
+
+          <div class="form-group mb-3">
+            <label class="form-label">GeoJSON FeatureCollection Payload (JSON) *</label>
+            <textarea
+              class="form-control font-mono geojson-textarea"
+              rows="10"
+              [(ngModel)]="importGeoJsonText"
+              placeholder='Paste GeoJSON FeatureCollection here (e.g. {"type": "FeatureCollection", "features": [...]})'></textarea>
+            <span class="form-hint">Must contain features array with polygon or multipolygon coordinates.</span>
+          </div>
+
+          <div class="form-actions">
+            <button
+              type="button"
+              class="admin-btn btn-primary"
+              [disabled]="isImporting() || !importGeoJsonText.trim()"
+              (click)="submitGeoJsonImport()">
+              {{ isImporting() ? 'Validating & Importing...' : 'Validate & Import Localities' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
 
   <!-- Add Micro-Market Zone Modal -->
   @if (isAddModalOpen()) {

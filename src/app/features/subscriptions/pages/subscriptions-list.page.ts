@@ -3,16 +3,89 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SubscriptionsStore } from '../state/subscriptions.store';
-import { PageHeaderComponent } from '@nukkadnow/admin-ui';
+import { PageHeaderComponent, BadgeComponent } from '@nukkadnow/admin-ui';
 import { DataTableComponent, TableColumn } from '@nukkadnow/admin-data-table';
 import { MerchantSubscriptionViewModel } from '../models/subscriptions-view.model';
 import { SubscriptionsStatusChipComponent } from '../components/subscriptions-status-chip.component';
 import { AdminSessionService } from '../../../core/auth/session.service';
+import { AdminApiClient, AdminEndpoints } from '@nukkadnow/admin-api-client';
+
+export interface SubscriptionPaymentReceipt {
+  id: string;
+  receiptNumber: string;
+  merchantId: string;
+  merchantName: string;
+  city: string;
+  planName: string;
+  amountPaise: number;
+  amountRupees: number;
+  paymentMethod: string;
+  paidAt: string;
+  status: string;
+  invoiceUrl: string;
+}
+
+export interface SubscriptionRenewalItem {
+  id: string;
+  merchantId: string;
+  merchantName: string;
+  city: string;
+  planName: string;
+  expiryDate: string;
+  daysRemaining: number;
+  autoDebitEnabled: boolean;
+  dunningNoticeSent: boolean;
+  riskLevel: 'NORMAL' | 'EXPIRING_SOON' | 'GRACE_PERIOD';
+}
+
+export interface SubscriptionCouponItem {
+  id: string;
+  code: string;
+  discountPercent?: number;
+  discountPaise?: number;
+  validUntil: string;
+  maxRedemptions: number;
+  redemptionCount: number;
+  description: string;
+  status: 'ACTIVE' | 'EXPIRED' | 'DISABLED';
+  createdAt: string;
+}
+
+export interface SubscriptionChurnAnalytics {
+  currentMrrPaise: number;
+  currentMrrRupees: number;
+  mrrGrowthMoMPct: number;
+  activeSubscribers: number;
+  newSubscribersMTD: number;
+  churnedSubscribersMTD: number;
+  churnRatePct: number;
+  averageRevenuePerStorePaise: number;
+  averageRevenuePerStoreRupees: number;
+  cohortRetention: Array<{
+    cohort: string;
+    initialCount: number;
+    month1RetentionPct: number;
+    month2RetentionPct: number;
+    month3RetentionPct: number;
+  }>;
+  planDistribution: Array<{
+    plan: string;
+    count: number;
+    percentage: number;
+  }>;
+}
 
 @Component({
   selector: 'admin-subscriptions-list-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, PageHeaderComponent, DataTableComponent, SubscriptionsStatusChipComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    PageHeaderComponent,
+    BadgeComponent,
+    DataTableComponent,
+    SubscriptionsStatusChipComponent
+  ],
   templateUrl: './subscriptions-list.page.html',
   styleUrls: ['./subscriptions-list.page.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -21,11 +94,28 @@ export class SubscriptionsListPageComponent implements OnInit {
   readonly store = inject(SubscriptionsStore);
   private readonly router = inject(Router);
   readonly sessionService = inject(AdminSessionService);
+  private readonly api = inject(AdminApiClient);
 
+  readonly activeSubTab = signal<'ACTIVE_SUBS' | 'PAYMENTS_RECEIPTS' | 'RENEWALS_EXPIRY' | 'DISCOUNTS_COUPONS' | 'CHURN_ANALYTICS'>('ACTIVE_SUBS');
   readonly selectedCity = signal<string>('ALL');
   readonly selectedStatus = signal<string>('ALL');
   readonly selectedPlan = signal<string>('ALL');
   readonly searchQuery = signal<string>('');
+
+  // Sprint 10 Reactive Collections
+  readonly receipts = signal<SubscriptionPaymentReceipt[]>([]);
+  readonly renewals = signal<SubscriptionRenewalItem[]>([]);
+  readonly coupons = signal<SubscriptionCouponItem[]>([]);
+  readonly churnAnalytics = signal<SubscriptionChurnAnalytics | null>(null);
+  readonly isLoadingExtras = signal<boolean>(false);
+  readonly successNotice = signal<string | null>(null);
+
+  // Create Coupon Modal state
+  readonly showCreateCouponModal = signal<boolean>(false);
+  newCouponCode = '';
+  newCouponDiscount = 20;
+  newCouponMaxRedemptions = 100;
+  newCouponDesc = '';
 
   readonly filteredSubscriptions = computed(() => {
     let list = this.store.items();
@@ -92,10 +182,47 @@ export class SubscriptionsListPageComponent implements OnInit {
       this.selectedCity.set(geo.cityName);
     }
     this.store.loadItems();
+    this.loadSprint10Data();
+  }
+
+  loadSprint10Data(): void {
+    const city = this.selectedCity();
+    const params = city !== 'ALL' ? { city } : undefined;
+    this.isLoadingExtras.set(true);
+
+    this.api.get<any>(AdminEndpoints.SUBSCRIPTIONS_PAYMENTS, params).subscribe({
+      next: res => {
+        const items = res?.data?.items || res?.data || [];
+        this.receipts.set(items);
+        this.isLoadingExtras.set(false);
+      },
+      error: () => this.isLoadingExtras.set(false)
+    });
+
+    this.api.get<any>(AdminEndpoints.SUBSCRIPTIONS_RENEWALS, params).subscribe({
+      next: res => {
+        const items = res?.data?.items || res?.data || [];
+        this.renewals.set(items);
+      }
+    });
+
+    this.api.get<any>(AdminEndpoints.SUBSCRIPTIONS_COUPONS).subscribe({
+      next: res => {
+        const items = res?.data?.items || res?.data || [];
+        this.coupons.set(items);
+      }
+    });
+
+    this.api.get<any>(AdminEndpoints.SUBSCRIPTIONS_CHURN_ANALYTICS, params).subscribe({
+      next: res => {
+        this.churnAnalytics.set(res?.data || null);
+      }
+    });
   }
 
   onCityChange(city: string): void {
     this.selectedCity.set(city);
+    this.loadSprint10Data();
   }
 
   onStatusChange(status: string): void {
@@ -111,8 +238,46 @@ export class SubscriptionsListPageComponent implements OnInit {
     this.searchQuery.set(input.value);
   }
 
+  switchSubTab(tab: 'ACTIVE_SUBS' | 'PAYMENTS_RECEIPTS' | 'RENEWALS_EXPIRY' | 'DISCOUNTS_COUPONS' | 'CHURN_ANALYTICS'): void {
+    this.activeSubTab.set(tab);
+  }
+
   refresh(): void {
     this.store.loadItems();
+    this.loadSprint10Data();
+  }
+
+  openCreateCouponModal(): void {
+    this.newCouponCode = '';
+    this.newCouponDiscount = 20;
+    this.newCouponMaxRedemptions = 100;
+    this.newCouponDesc = '';
+    this.showCreateCouponModal.set(true);
+  }
+
+  closeCreateCouponModal(): void {
+    this.showCreateCouponModal.set(false);
+  }
+
+  submitCreateCoupon(): void {
+    if (!this.newCouponCode.trim()) return;
+
+    this.api.post<any>(AdminEndpoints.SUBSCRIPTIONS_COUPONS, {
+      code: this.newCouponCode.trim(),
+      discountPercent: Number(this.newCouponDiscount),
+      maxRedemptions: Number(this.newCouponMaxRedemptions),
+      description: this.newCouponDesc || 'Merchant partner promotional voucher',
+      validUntil: new Date(Date.now() + 30 * 86400000).toISOString()
+    }).subscribe({
+      next: res => {
+        if (res?.data) {
+          this.coupons.update(list => [res.data, ...list]);
+          this.closeCreateCouponModal();
+          this.successNotice.set(`Promo code ${res.data.code} created successfully.`);
+          setTimeout(() => this.successNotice.set(null), 4000);
+        }
+      }
+    });
   }
 
   exportCsv(): void {

@@ -238,6 +238,7 @@ export class AdminSidebarComponent {
       title: 'Commerce & Moderation',
       items: [
         { label: 'Live Orders Stream', route: '/orders', icon: '🛍️', permission: AdminPermissions.ORDERS_READ },
+        { label: 'Inventory Monitoring', route: '/inventory-monitoring', icon: '📋', permission: AdminPermissions.CATALOG_READ, badge: 'Stock', badgeColor: 'warning' },
         { label: 'Catalog Moderation', route: '/catalogue-moderation', icon: '📦', permission: AdminPermissions.CATALOG_READ, badge: 'Review', badgeColor: 'info' },
         { label: 'Category Taxonomy', route: '/categories', icon: '🗂️', permission: AdminPermissions.CATEGORIES_MANAGE },
         { label: 'Reviews & Disputes', route: '/reviews-moderation', icon: '⭐', permission: AdminPermissions.REVIEWS_READ },
@@ -253,8 +254,9 @@ export class AdminSidebarComponent {
       ],
     },
     {
-      title: 'Support & Alerts',
+      title: 'Support & Helpdesk',
       items: [
+        { label: 'Customer Directory', route: '/customers', icon: '👤', permission: AdminPermissions.SUPPORT_READ },
         { label: 'Support Tickets', route: '/support-tickets', icon: '🎧', permission: AdminPermissions.SUPPORT_READ },
         { label: 'Broadcasts & Templates', route: '/notifications', icon: '📢', permission: AdminPermissions.NOTIFICATIONS_SEND_BROADCAST },
         { label: 'Analytics & Heatmaps', route: '/analytics', icon: '📈', permission: AdminPermissions.ANALYTICS_READ },

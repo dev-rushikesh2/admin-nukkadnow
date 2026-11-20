@@ -1,7 +1,7 @@
 <div class="catalogue-moderation-page-container">
   <admin-page-header
-    title="Platform Catalog & Price Governance"
-    subtitle="Admin Price-Cap enforcement, legal MRP verification, anti-gouging controls, and takedown management"
+    title="Platform Catalog, Policy & Price Governance"
+    subtitle="Admin Price-Cap enforcement, legal MRP verification, restricted items blocklist, and reported listings triage"
     breadcrumb="Console / Catalog Governance & Price Caps">
     <div actions>
       <button class="admin-btn btn-secondary btn-sm" (click)="toggleAddCap()">
@@ -11,78 +11,169 @@
     </div>
   </admin-page-header>
 
-  <!-- Platform Admin Price Caps Governance Card -->
-  <section class="price-caps-section mb-6">
+  <!-- Module Sub-Tabs (Screens #67, #71, #72) -->
+  <div class="catalog-sub-tabs">
+    <button
+      type="button"
+      class="subtab-btn"
+      [class.active]="activeTab() === 'PRICE_CAPS'"
+      (click)="setTab('PRICE_CAPS')">
+      📦 Price Caps & Sanity Queue (#67)
+    </button>
+    <button
+      type="button"
+      class="subtab-btn"
+      [class.active]="activeTab() === 'RESTRICTED'"
+      (click)="setTab('RESTRICTED')">
+      🚫 Restricted Products Blocklist (#71)
+    </button>
+    <button
+      type="button"
+      class="subtab-btn"
+      [class.active]="activeTab() === 'REPORTED'"
+      (click)="setTab('REPORTED')">
+      🚨 Reported Listings Triage (#72)
+    </button>
+  </div>
+
+  <!-- TAB 1: PRICE CAPS & MODERATION (Screen #67) -->
+  @if (activeTab() === 'PRICE_CAPS') {
+    <!-- Platform Admin Price Caps Governance Card -->
+    <section class="price-caps-section mb-6">
+      <div class="section-card">
+        <div class="card-header-flex">
+          <div>
+            <h2 class="card-title">Active Platform Price Caps</h2>
+            <p class="card-subtitle">
+              Mandatory maximum allowable selling prices enforced across all tenant merchants to prevent gouging and protect consumers.
+            </p>
+          </div>
+        </div>
+
+        <!-- Add Price Cap Form -->
+        @if (showAddCapForm()) {
+          <div class="add-cap-form-box">
+            <h3 class="form-box-title">Create Platform Price Ceiling</h3>
+            <div class="form-row-grid">
+              <div class="form-group">
+                <label>Scope</label>
+                <select [(ngModel)]="newScope" class="admin-input">
+                  <option value="CATEGORY">Category</option>
+                  <option value="LOCALITY">Locality / City</option>
+                  <option value="GLOBAL">Global Platform</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Target Category / Locality</label>
+                <input type="text" [(ngModel)]="newTargetKey" placeholder="e.g. Dairy & Milk, Fresh Produce" class="admin-input" />
+              </div>
+              <div class="form-group">
+                <label>Max Ceiling Price (₹)</label>
+                <input type="number" [(ngModel)]="newMaxPriceRupees" min="1" class="admin-input" />
+              </div>
+              <div class="form-group">
+                <label>Regulatory Mandate / Reason</label>
+                <input type="text" [(ngModel)]="newReason" placeholder="e.g. Essential goods price stabilization" class="admin-input" />
+              </div>
+            </div>
+            <div class="form-actions-row">
+              <button class="admin-btn btn-primary btn-sm" (click)="submitNewPriceCap()">Enforce Rule</button>
+              <button class="admin-btn btn-secondary btn-sm" (click)="toggleAddCap()">Cancel</button>
+            </div>
+          </div>
+        }
+
+        <!-- Rules Table -->
+        <div class="table-responsive">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Scope</th>
+                <th>Target</th>
+                <th>Max Price Cap</th>
+                <th>MRP Cap</th>
+                <th>Regulatory Reason</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (rule of store.priceCaps(); track rule.id) {
+                <tr>
+                  <td><span class="badge badge-scope">{{ rule.scope }}</span></td>
+                  <td><strong>{{ rule.targetKey }}</strong></td>
+                  <td><span class="text-cap-price">{{ rule.maxPriceFormatted }}</span></td>
+                  <td>{{ rule.enforceMrpCap ? 'Mandatory (<= MRP)' : 'Disabled' }}</td>
+                  <td class="text-muted">{{ rule.reason }}</td>
+                  <td>
+                    <span class="status-chip active">ACTIVE</span>
+                  </td>
+                  <td>
+                    <button class="admin-btn btn-danger-ghost btn-xs" (click)="deactivateCap(rule.id)">Deactivate</button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Catalog Moderation Queue -->
+    <section class="moderation-queue-section">
+      <div class="section-card">
+        <h2 class="card-title">Product Moderation & Price Sanity Queue</h2>
+        <p class="card-subtitle">
+          Merchants submit items within their autonomy. Flagged entries show price-cap or MRP breaches requiring admin action.
+        </p>
+
+        <admin-data-table
+          [columns]="tableColumns"
+          [data]="store.items()"
+          [totalCount]="store.totalCount()"
+          [loading]="store.loading()"
+          (rowClick)="onRowClick($event)">
+        </admin-data-table>
+      </div>
+    </section>
+  }
+
+  <!-- TAB 2: RESTRICTED PRODUCTS POLICY BLOCKLIST (Screen #71) -->
+  @if (activeTab() === 'RESTRICTED') {
     <div class="section-card">
       <div class="card-header-flex">
         <div>
-          <h2 class="card-title">Active Platform Price Caps</h2>
+          <h2 class="card-title">Statutory Restricted & Regulated Product Policies</h2>
           <p class="card-subtitle">
-            Mandatory maximum allowable selling prices enforced across all tenant merchants to prevent gouging and protect consumers.
+            Platform-wide statutory blocklist enforced across tenant catalogs under Central & Maharashtra State regulations.
           </p>
         </div>
       </div>
 
-      <!-- Add Price Cap Form -->
-      @if (showAddCapForm()) {
-        <div class="add-cap-form-box">
-          <h3 class="form-box-title">Create Platform Price Ceiling</h3>
-          <div class="form-row-grid">
-            <div class="form-group">
-              <label>Scope</label>
-              <select [(ngModel)]="newScope" class="admin-input">
-                <option value="CATEGORY">Category</option>
-                <option value="LOCALITY">Locality / City</option>
-                <option value="GLOBAL">Global Platform</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Target Category / Locality</label>
-              <input type="text" [(ngModel)]="newTargetKey" placeholder="e.g. Dairy & Milk, Fresh Produce" class="admin-input" />
-            </div>
-            <div class="form-group">
-              <label>Max Ceiling Price (₹)</label>
-              <input type="number" [(ngModel)]="newMaxPriceRupees" min="1" class="admin-input" />
-            </div>
-            <div class="form-group">
-              <label>Regulatory Mandate / Reason</label>
-              <input type="text" [(ngModel)]="newReason" placeholder="e.g. Essential goods price stabilization" class="admin-input" />
-            </div>
-          </div>
-          <div class="form-actions-row">
-            <button class="admin-btn btn-primary btn-sm" (click)="submitNewPriceCap()">Enforce Rule</button>
-            <button class="admin-btn btn-secondary btn-sm" (click)="toggleAddCap()">Cancel</button>
-          </div>
-        </div>
-      }
-
-      <!-- Rules Table -->
-      <div class="table-responsive">
+      <div class="table-responsive mt-4">
         <table class="admin-table">
           <thead>
             <tr>
-              <th>Scope</th>
-              <th>Target</th>
-              <th>Max Price Cap</th>
-              <th>MRP Cap</th>
-              <th>Regulatory Reason</th>
-              <th>Status</th>
-              <th>Actions</th>
+              <th>Policy ID</th>
+              <th>Restricted Commodity Category</th>
+              <th>Restriction Classification</th>
+              <th>Statutory Legal Mandate</th>
+              <th>Enforcement Action</th>
+              <th>Platform Status</th>
             </tr>
           </thead>
           <tbody>
-            @for (rule of store.priceCaps(); track rule.id) {
+            @for (pol of restrictedPolicies(); track pol.id) {
               <tr>
-                <td><span class="badge badge-scope">{{ rule.scope }}</span></td>
-                <td><strong>{{ rule.targetKey }}</strong></td>
-                <td><span class="text-cap-price">{{ rule.maxPriceFormatted }}</span></td>
-                <td>{{ rule.enforceMrpCap ? 'Mandatory (<= MRP)' : 'Disabled' }}</td>
-                <td class="text-muted">{{ rule.reason }}</td>
+                <td class="font-mono font-bold">{{ pol.id }}</td>
+                <td class="font-bold">{{ pol.category }}</td>
                 <td>
-                  <span class="status-chip active">ACTIVE</span>
+                  <span class="badge badge-scope">{{ pol.restrictionLevel }}</span>
                 </td>
+                <td class="text-muted">{{ pol.statutoryReference }}</td>
+                <td class="font-mono text-xs">{{ pol.actionOnDetection }}</td>
                 <td>
-                  <button class="admin-btn btn-danger-ghost btn-xs" (click)="deactivateCap(rule.id)">Deactivate</button>
+                  <admin-badge variant="success">{{ pol.status }}</admin-badge>
                 </td>
               </tr>
             }
@@ -90,23 +181,61 @@
         </table>
       </div>
     </div>
-  </section>
+  }
 
-  <!-- Catalog Moderation Queue -->
-  <section class="moderation-queue-section">
+  <!-- TAB 3: REPORTED PRODUCTS INVESTIGATION (Screen #72) -->
+  @if (activeTab() === 'REPORTED') {
     <div class="section-card">
-      <h2 class="card-title">Product Moderation & Price Sanity Queue</h2>
-      <p class="card-subtitle">
-        Merchants submit items within their autonomy. Flagged entries show price-cap or MRP breaches requiring admin action.
-      </p>
+      <div class="card-header-flex">
+        <div>
+          <h2 class="card-title">Reported Product Listings Investigation Queue</h2>
+          <p class="card-subtitle">
+            Escalations submitted by consumers, local brands, and automated audit bots for adulteration, trademark infringement, or expired goods.
+          </p>
+        </div>
+      </div>
 
-      <admin-data-table
-        [columns]="tableColumns"
-        [data]="store.items()"
-        [totalCount]="store.totalCount()"
-        [loading]="store.loading()"
-        (rowClick)="onRowClick($event)">
-      </admin-data-table>
+      <div class="table-responsive mt-4">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Report Ref</th>
+              <th>Flagged Product</th>
+              <th>Merchant Vendor</th>
+              <th>City</th>
+              <th>Reported By</th>
+              <th>Infringement Reason</th>
+              <th>Severity</th>
+              <th>Enforcement State</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (rep of reportedItems(); track rep.id) {
+              <tr>
+                <td class="font-mono font-bold">{{ rep.id }}</td>
+                <td>
+                  <div class="font-bold">{{ rep.productName }}</div>
+                  <div class="text-muted text-xs font-mono">{{ rep.productId }}</div>
+                </td>
+                <td>{{ rep.merchantName }}</td>
+                <td><admin-badge variant="neutral">📍 {{ rep.city }}</admin-badge></td>
+                <td class="text-muted text-xs">{{ rep.reportedBy }}</td>
+                <td>{{ rep.reason }}</td>
+                <td>
+                  <span class="badge" [class.badge-danger]="rep.severity === 'CRITICAL'">
+                    {{ rep.severity }}
+                  </span>
+                </td>
+                <td>
+                  <admin-badge [variant]="rep.status === 'TAKEDOWN_ENFORCED' ? 'danger' : 'warning'">
+                    {{ rep.status }}
+                  </admin-badge>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
     </div>
-  </section>
+  }
 </div>

@@ -1,0 +1,544 @@
+<div class="inventory-page-container">
+  <admin-page-header
+    [title]="'Merchant Inventory Monitoring — ' + activeCityName()"
+    subtitle="Live monitoring of merchant stock health, low stock triage, movements ledger, and cycle count discrepancies."
+    breadcrumb="Console / Merchant Inventory Monitoring">
+    <div actions>
+      <button type="button" class="admin-btn btn-secondary btn-sm" (click)="refreshAll()">↻ Refresh</button>
+      <button type="button" class="admin-btn btn-primary btn-sm" (click)="exportCsv()">Export CSV</button>
+    </div>
+  </admin-page-header>
+
+  <!-- City Territory Selector Bar (Root & Super Admin) -->
+  @if (sessionService.isRoot() || sessionService.isSuperAdmin()) {
+    <div class="city-selector-bar">
+      <span class="bar-lbl">Territory Filter:</span>
+      <div class="city-pills">
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'ALL'" (click)="setCity('ALL')">All Cities (Global)</button>
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'Nagpur'" (click)="setCity('Nagpur')">📍 Nagpur</button>
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'Akola'" (click)="setCity('Akola')">📍 Akola</button>
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'Amravati'" (click)="setCity('Amravati')">📍 Amravati</button>
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'Pune'" (click)="setCity('Pune')">📍 Pune</button>
+      </div>
+    </div>
+  } @else if (sessionService.geoAssignment()) {
+    <div class="geo-locked-banner">
+      <span>📍 Managing merchant inventory strictly within <strong>{{ sessionService.geoAssignment()?.cityName }} Municipal Territory</strong></span>
+    </div>
+  }
+
+  <!-- Screen #73: Executive Inventory Metrics Cards -->
+  @if (overview()) {
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-header">
+          <span class="metric-title">Tracked Store SKUs</span>
+          <span class="metric-icon">📦</span>
+        </div>
+        <div class="metric-value">{{ overview()?.totalSkus }}</div>
+        <div class="metric-sub">Active merchant catalog listings</div>
+      </div>
+
+      <div class="metric-card" [class.alert]="(overview()?.lowStockCount || 0) > 0">
+        <div class="metric-header">
+          <span class="metric-title">Low Stock Alerts</span>
+          <span class="metric-icon">⚠️</span>
+        </div>
+        <div class="metric-value text-warning">{{ overview()?.lowStockCount }}</div>
+        <div class="metric-sub">Stock &le; safety threshold</div>
+      </div>
+
+      <div class="metric-card" [class.danger]="(overview()?.outOfStockCount || 0) > 0">
+        <div class="metric-header">
+          <span class="metric-title">Out of Stock</span>
+          <span class="metric-icon">🚫</span>
+        </div>
+        <div class="metric-value text-danger">{{ overview()?.outOfStockCount }}</div>
+        <div class="metric-sub">Immediate merchant restock needed</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-header">
+          <span class="metric-title">Near-Expiry Perishables</span>
+          <span class="metric-icon">⏳</span>
+        </div>
+        <div class="metric-value text-info">{{ overview()?.nearExpiryCount }}</div>
+        <div class="metric-sub">Within &le; 48 hours shelf-life</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-header">
+          <span class="metric-title">Stock Valuation</span>
+          <span class="metric-icon">💰</span>
+        </div>
+        <div class="metric-value">₹{{ (overview()?.totalInventoryValuationRupees || 0) | number }}</div>
+        <div class="metric-sub">{{ overview()?.totalInventoryValuationPaise | number }} paise</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-header">
+          <span class="metric-title">Pending Discrepancies</span>
+          <span class="metric-icon">⚖️</span>
+        </div>
+        <div class="metric-value">{{ overview()?.pendingDiscrepanciesCount }}</div>
+        <div class="metric-sub">Awaiting cycle count resolution</div>
+      </div>
+    </div>
+  }
+
+  <!-- Module Sub-Tabs (Screens #73-#78) -->
+  <div class="inventory-sub-tabs">
+    <button
+      type="button"
+      class="subtab-btn"
+      [class.active]="activeTab() === 'INSIGHTS'"
+      (click)="setTab('INSIGHTS')">
+      📊 All Merchant Stocks (#74)
+    </button>
+    <button
+      type="button"
+      class="subtab-btn"
+      [class.active]="activeTab() === 'LOW_STOCK'"
+      (click)="setTab('LOW_STOCK')">
+      ⚠️ Low Stock Triage (#75)
+    </button>
+    <button
+      type="button"
+      class="subtab-btn"
+      [class.active]="activeTab() === 'MOVEMENTS'"
+      (click)="setTab('MOVEMENTS')">
+      📜 Stock Movements Ledger (#76)
+    </button>
+    <button
+      type="button"
+      class="subtab-btn"
+      [class.active]="activeTab() === 'RECONCILIATION'"
+      (click)="setTab('RECONCILIATION')">
+      ⚖️ Discrepancies & Audit (#77)
+    </button>
+    <button
+      type="button"
+      class="subtab-btn"
+      [class.active]="activeTab() === 'DATA_QUALITY'"
+      (click)="setTab('DATA_QUALITY')">
+      🛡️ Data Quality Radar (#78)
+    </button>
+  </div>
+
+  <!-- TAB 1: ALL MERCHANT STOCKS (Screen #74) -->
+  @if (activeTab() === 'INSIGHTS') {
+    <div class="tab-content">
+      <!-- Filter & Search Toolbar -->
+      <div class="filter-toolbar">
+        <div class="search-input-box">
+          <span class="search-icon">🔍</span>
+          <input
+            type="text"
+            class="admin-input"
+            placeholder="Search SKU, product title, merchant, or outlet..."
+            [ngModel]="searchQuery()"
+            (ngModelChange)="searchQuery.set($event); loadStocks()" />
+        </div>
+
+        <div class="filter-controls">
+          <select class="admin-select" [ngModel]="selectedCategory()" (ngModelChange)="selectedCategory.set($event); loadStocks()">
+            <option value="ALL">All Categories</option>
+            <option value="Vegetables & Fruits">Vegetables & Fruits</option>
+            <option value="Grocery & Daily Needs">Grocery & Daily Needs</option>
+            <option value="Dairy & Breakfast">Dairy & Breakfast</option>
+            <option value="Dairy, Sweets & Bakery">Dairy, Sweets & Bakery</option>
+          </select>
+
+          <select class="admin-select" [ngModel]="selectedStatus()" (ngModelChange)="selectedStatus.set($event); loadStocks()">
+            <option value="ALL">All Stock Statuses</option>
+            <option value="HEALTHY">Healthy Stock</option>
+            <option value="LOW_STOCK">Low Stock (&le; Safety)</option>
+            <option value="OUT_OF_STOCK">Out of Stock (0)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Stocks Data Table -->
+      <div class="table-container">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>SKU / Barcode</th>
+              <th>Product / Offering</th>
+              <th>Merchant & Outlet</th>
+              <th>Territory</th>
+              <th>Available / On-Hand</th>
+              <th>Safety Limit</th>
+              <th>Price (₹)</th>
+              <th>Supply</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (isLoading()) {
+              <tr>
+                <td colspan="9" class="text-center py-8">Loading merchant inventory ledger...</td>
+              </tr>
+            } @else if (stocks().length === 0) {
+              <tr>
+                <td colspan="9" class="text-center py-8 text-muted">No merchant stock records match the selected criteria.</td>
+              </tr>
+            } @else {
+              @for (item of stocks(); track item.id) {
+                <tr>
+                  <td>
+                    <div class="font-mono font-medium">{{ item.sku }}</div>
+                    <div class="text-muted text-xs font-mono">{{ item.barcode }}</div>
+                  </td>
+                  <td>
+                    <div class="font-medium">{{ item.productName }}</div>
+                    <div class="text-muted text-xs">{{ item.category }} · {{ item.unit }}</div>
+                  </td>
+                  <td>
+                    <div class="font-medium">{{ item.outletName }}</div>
+                    <div class="text-muted text-xs">{{ item.merchantName }}</div>
+                  </td>
+                  <td>
+                    <admin-badge variant="neutral">📍 {{ item.city }}</admin-badge>
+                    <div class="text-muted text-xs mt-1">{{ item.locality }}</div>
+                  </td>
+                  <td>
+                    <div class="stock-level-cell">
+                      <span class="stock-num" [class.text-danger]="item.availableStock === 0" [class.text-warning]="item.availableStock > 0 && item.availableStock <= item.safetyStock">
+                        {{ item.availableStock }} {{ item.unit }}
+                      </span>
+                      <span class="text-muted text-xs">({{ item.onHandStock }} total, {{ item.reservedStock }} rsvd)</span>
+                    </div>
+                  </td>
+                  <td class="text-muted font-medium">{{ item.safetyStock }}</td>
+                  <td>
+                    <div class="font-medium">₹{{ (item.pricePaise / 100) | number:'1.2-2' }}</div>
+                    <div class="text-muted text-xs line-through">₹{{ (item.mrpPaise / 100) | number:'1.2-2' }}</div>
+                  </td>
+                  <td>
+                    <span class="days-supply-pill">{{ item.daysOfSupply }}d</span>
+                  </td>
+                  <td>
+                    @if (item.status === 'OUT_OF_STOCK') {
+                      <admin-badge variant="danger">Out of Stock</admin-badge>
+                    } @else if (item.status === 'LOW_STOCK') {
+                      <admin-badge variant="warning">Low Stock</admin-badge>
+                    } @else {
+                      <admin-badge variant="success">Healthy</admin-badge>
+                    }
+                  </td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- TAB 2: LOW STOCK & OUT OF STOCK TRIAGE (Screen #75) -->
+  @if (activeTab() === 'LOW_STOCK') {
+    <div class="tab-content">
+      <div class="triage-callout">
+        <span class="callout-icon">🚨</span>
+        <div>
+          <h4>Urgent Stock Depletion Triage Queue</h4>
+          <p>These SKUs are running below safety buffer stock or completely depleted. Automated replenishment notifications have been dispatched to merchant store owners.</p>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Severity</th>
+              <th>SKU / Product</th>
+              <th>Merchant Outlet</th>
+              <th>City</th>
+              <th>Available Stock</th>
+              <th>Safety Threshold</th>
+              <th>Last Restocked</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of stocks(); track item.id) {
+              @if (item.status === 'LOW_STOCK' || item.status === 'OUT_OF_STOCK') {
+                <tr>
+                  <td>
+                    @if (item.status === 'OUT_OF_STOCK') {
+                      <span class="severity-pill critical">CRITICAL</span>
+                    } @else {
+                      <span class="severity-pill warning">WARNING</span>
+                    }
+                  </td>
+                  <td>
+                    <div class="font-medium">{{ item.productName }}</div>
+                    <div class="font-mono text-muted text-xs">{{ item.sku }} · {{ item.unit }}</div>
+                  </td>
+                  <td>
+                    <div class="font-medium">{{ item.outletName }}</div>
+                    <div class="text-muted text-xs">{{ item.merchantName }}</div>
+                  </td>
+                  <td>
+                    <admin-badge variant="neutral">📍 {{ item.city }}</admin-badge>
+                  </td>
+                  <td>
+                    <span class="font-bold text-lg" [class.text-danger]="item.availableStock === 0" [class.text-warning]="item.availableStock > 0">
+                      {{ item.availableStock }} {{ item.unit }}
+                    </span>
+                  </td>
+                  <td class="font-medium text-muted">{{ item.safetyStock }}</td>
+                  <td class="text-muted">{{ item.lastRestockedAt | date:'mediumDate' }} ({{ item.lastRestockedDaysAgo }}d ago)</td>
+                  <td>
+                    <button type="button" class="admin-btn btn-secondary btn-sm" (click)="loadStocks()">
+                      🔔 Restock Ping
+                    </button>
+                  </td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- TAB 3: STOCK MOVEMENTS AUDIT LEDGER (Screen #76) -->
+  @if (activeTab() === 'MOVEMENTS') {
+    <div class="tab-content">
+      <div class="ledger-header">
+        <div>
+          <h3>Stock Movement & Reservation Event Ledger</h3>
+          <p>Chronological immutable record of every inventory delta: customer order holds, fulfillment deductions, and supplier restocks.</p>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Event Type</th>
+              <th>Product / SKU</th>
+              <th>Merchant Outlet</th>
+              <th>Delta</th>
+              <th>Stock Balance</th>
+              <th>Reference ID</th>
+              <th>Initiated By</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (mov of movements(); track mov.id) {
+              <tr>
+                <td class="text-muted font-mono text-xs">{{ mov.timestamp | date:'short' }}</td>
+                <td>
+                  <span class="event-type-badge" [class.order]="mov.type.includes('ORDER')" [class.restock]="mov.type.includes('RESTOCK')" [class.spoil]="mov.type.includes('SPOIL')">
+                    {{ mov.type }}
+                  </span>
+                </td>
+                <td>
+                  <div class="font-medium">{{ mov.productName }}</div>
+                  <div class="text-muted text-xs font-mono">{{ mov.productId }}</div>
+                </td>
+                <td>
+                  <div class="font-medium">{{ mov.outletName }}</div>
+                  <div class="text-muted text-xs">{{ mov.city }}</div>
+                </td>
+                <td>
+                  <span class="font-mono font-bold" [class.text-success]="mov.delta > 0" [class.text-danger]="mov.delta < 0">
+                    {{ mov.delta > 0 ? '+' : '' }}{{ mov.delta }}
+                  </span>
+                </td>
+                <td class="font-mono text-muted">
+                  {{ mov.balanceBefore }} &rarr; <strong>{{ mov.balanceAfter }}</strong>
+                </td>
+                <td>
+                  <span class="font-mono text-xs reference-token">{{ mov.referenceId }}</span>
+                </td>
+                <td class="text-muted text-xs">{{ mov.recordedBy }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- TAB 4: RECONCILIATION & DISCREPANCY OVERSIGHT (Screen #77) -->
+  @if (activeTab() === 'RECONCILIATION') {
+    <div class="tab-content">
+      <div class="ledger-header">
+        <div>
+          <h3>Inventory Discrepancy & Cycle Count Oversight</h3>
+          <p>Investigate discrepancies between system inventory records and merchant physical shelf counts.</p>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Case ID</th>
+              <th>Product & SKU</th>
+              <th>Store Outlet</th>
+              <th>City</th>
+              <th>System vs Physical</th>
+              <th>Delta</th>
+              <th>Reason Code</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (rec of reconciliations(); track rec.id) {
+              <tr>
+                <td class="font-mono font-bold">{{ rec.id }}</td>
+                <td>
+                  <div class="font-medium">{{ rec.productName }}</div>
+                  <div class="font-mono text-muted text-xs">{{ rec.sku }}</div>
+                </td>
+                <td>
+                  <div class="font-medium">{{ rec.outletName }}</div>
+                  <div class="text-muted text-xs">{{ rec.merchantName }}</div>
+                </td>
+                <td><admin-badge variant="neutral">📍 {{ rec.city }}</admin-badge></td>
+                <td class="font-mono">
+                  System: {{ rec.systemStock }} | Shelf: <strong>{{ rec.physicalStock }}</strong>
+                </td>
+                <td>
+                  <span class="font-mono font-bold" [class.text-danger]="rec.discrepancyDelta < 0" [class.text-success]="rec.discrepancyDelta > 0">
+                    {{ rec.discrepancyDelta > 0 ? '+' : '' }}{{ rec.discrepancyDelta }}
+                  </span>
+                </td>
+                <td>
+                  <span class="reason-tag">{{ rec.reasonCode }}</span>
+                </td>
+                <td>
+                  @if (rec.status === 'PENDING_REVIEW') {
+                    <admin-badge variant="warning">Pending Review</admin-badge>
+                  } @else if (rec.status === 'RESOLVED') {
+                    <admin-badge variant="success">Resolved</admin-badge>
+                  } @else {
+                    <admin-badge variant="danger">Rejected</admin-badge>
+                  }
+                </td>
+                <td>
+                  @if (rec.status === 'PENDING_REVIEW') {
+                    <button type="button" class="admin-btn btn-primary btn-sm" (click)="openResolveDialog(rec)">
+                      Resolve Audit
+                    </button>
+                  } @else {
+                    <span class="text-muted text-xs">Resolved by {{ rec.resolvedBy }}</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- TAB 5: DATA QUALITY RADAR (Screen #78) -->
+  @if (activeTab() === 'DATA_QUALITY') {
+    <div class="tab-content">
+      @if (dataQuality()) {
+        <div class="quality-score-panel">
+          <div class="score-circle">
+            <span class="score-val">{{ dataQuality()?.overallQualityScorePct }}%</span>
+            <span class="score-lbl">Catalog Quality</span>
+          </div>
+          <div class="score-details">
+            <h3>Inventory Data Integrity & Compliance Radar</h3>
+            <p>Automated telemetry scans catalog listings for missing barcodes, stale untouched inventory, and price anomalies violating platform regulations.</p>
+          </div>
+        </div>
+
+        <div class="quality-cards-grid">
+          <div class="qcard">
+            <h4>Stale SKUs (&gt; 14 Days Inactive)</h4>
+            <div class="qcard-count">{{ dataQuality()?.staleSkusCount }} Items</div>
+            <p>Products with zero sales velocity and no stock adjustments in over 2 weeks.</p>
+          </div>
+
+          <div class="qcard">
+            <h4>Missing Barcodes / HSN</h4>
+            <div class="qcard-count">{{ dataQuality()?.missingBarcodesCount }} Items</div>
+            <p>Items missing statutory EAN-13 barcodes required for fast checkout scanning.</p>
+          </div>
+
+          <div class="qcard">
+            <h4>Price & MRP Violations</h4>
+            <div class="qcard-count text-danger">{{ dataQuality()?.priceAnomaliesCount }} Items</div>
+            <p>Listings where selling price violates Legal Metrology Act (Price &gt;= MRP).</p>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Resolution Modal for Inventory Reconciliation -->
+  @if (activeReconciliation()) {
+    <div class="modal-backdrop" (click)="closeResolveDialog()">
+      <div class="modal-panel" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div>
+            <h3>Resolve Inventory Discrepancy — {{ activeReconciliation()?.id }}</h3>
+            <p>{{ activeReconciliation()?.productName }} ({{ activeReconciliation()?.outletName }})</p>
+          </div>
+          <button type="button" class="close-btn" (click)="closeResolveDialog()">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="summary-box">
+            <div class="sum-row">
+              <span class="sum-lbl">System Ledger Count:</span>
+              <span class="sum-val font-mono">{{ activeReconciliation()?.systemStock }}</span>
+            </div>
+            <div class="sum-row">
+              <span class="sum-lbl">Physical Verified Count:</span>
+              <span class="sum-val font-mono font-bold">{{ activeReconciliation()?.physicalStock }}</span>
+            </div>
+            <div class="sum-row">
+              <span class="sum-lbl">Adjustment Delta:</span>
+              <span class="sum-val font-mono font-bold" [class.text-danger]="(activeReconciliation()?.discrepancyDelta || 0) < 0">
+                {{ (activeReconciliation()?.discrepancyDelta || 0) > 0 ? '+' : '' }}{{ activeReconciliation()?.discrepancyDelta }}
+              </span>
+            </div>
+          </div>
+
+          <div class="form-group mt-4">
+            <label>Adjudication Action</label>
+            <select class="form-control" [ngModel]="reconciliationAction()" (ngModelChange)="reconciliationAction.set($event)">
+              <option value="APPROVE_ADJUSTMENT">Approve Adjustment — Post Delta to Stock Ledger</option>
+              <option value="REJECT_DISCREPANCY">Reject Discrepancy — Retain Current System Stock</option>
+            </select>
+          </div>
+
+          <div class="form-group mt-3">
+            <label>Audit Justification Notes *</label>
+            <textarea
+              class="form-control"
+              rows="3"
+              placeholder="Provide reason and physical inspection details for cryptographic audit trail..."
+              [ngModel]="reconciliationNotes()"
+              (ngModelChange)="reconciliationNotes.set($event)">
+            </textarea>
+          </div>
+
+          <div class="modal-footer mt-4">
+            <button type="button" class="admin-btn btn-secondary" (click)="closeResolveDialog()">Cancel</button>
+            <button
+              type="button"
+              class="admin-btn btn-primary"
+              [disabled]="isSubmitting() || !reconciliationNotes().trim()"
+              (click)="submitReconciliationResolution()">
+              @if (isSubmitting()) { Processing... } @else { Commit Resolution }
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+</div>

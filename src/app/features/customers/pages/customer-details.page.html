@@ -1,0 +1,330 @@
+<div class="customer-details-container">
+  @if (customer(); as cust) {
+    <admin-page-header
+      [title]="cust.fullName + ' — Customer 360° Profile'"
+      [subtitle]="'Account ID: ' + cust.id + ' · Primary Territory: ' + cust.cityName + ' (' + cust.cityCode + ')'"
+      breadcrumb="Console / Customers / Details">
+      <div actions>
+        <button type="button" class="admin-btn btn-secondary btn-sm" (click)="goBack()">&larr; Back to Directory</button>
+        @if (cust.status === 'ACTIVE') {
+          <button type="button" class="admin-btn btn-warning btn-sm" (click)="openStatusModal('RESTRICTED')">Restrict Account</button>
+          <button type="button" class="admin-btn btn-danger btn-sm" (click)="openStatusModal('SUSPENDED')">Suspend Account</button>
+        } @else {
+          <button type="button" class="admin-btn btn-success btn-sm" (click)="openStatusModal('ACTIVE')">Restore Active Access</button>
+        }
+      </div>
+    </admin-page-header>
+
+    <!-- Top Identity & DPDP PII Card -->
+    <div class="profile-card">
+      <div class="profile-header">
+        <div class="avatar-box">
+          <span class="avatar-icon">👤</span>
+        </div>
+        <div class="profile-info">
+          <div class="name-row">
+            <h2>{{ cust.fullName }}</h2>
+            @if (cust.segment === 'VIP') {
+              <span class="cohort-pill vip">⭐ VIP Spender</span>
+            } @else if (cust.segment === 'REPEAT') {
+              <span class="cohort-pill repeat">🔄 Repeat Buyer</span>
+            } @else {
+              <span class="cohort-pill active">{{ cust.segment }}</span>
+            }
+            @if (cust.status === 'ACTIVE') {
+              <admin-badge variant="success">Active Account</admin-badge>
+            } @else if (cust.status === 'RESTRICTED') {
+              <admin-badge variant="warning">Restricted Account</admin-badge>
+            } @else {
+              <admin-badge variant="danger">Suspended</admin-badge>
+            }
+          </div>
+          <div class="meta-row">
+            <span>📍 {{ cust.cityName }} Municipal Territory</span>
+            <span>·</span>
+            <span>Customer since {{ cust.registeredAt | date:'mediumDate' }}</span>
+            <span>·</span>
+            <span>Last active {{ cust.lastActiveAt | date:'short' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- DPDP PII Protection Panel -->
+      <div class="pii-security-panel">
+        <div class="pii-item">
+          <span class="pii-lbl">Phone Number:</span>
+          @if (unmaskedData(); as unmasked) {
+            <span class="pii-val font-mono font-bold text-success">📞 {{ unmasked.phone }}</span>
+          } @else {
+            <span class="pii-val font-mono">🔒 {{ cust.maskedPhone }}</span>
+          }
+        </div>
+
+        <div class="pii-item">
+          <span class="pii-lbl">Email Address:</span>
+          @if (unmaskedData(); as unmasked) {
+            <span class="pii-val font-mono font-bold text-success">✉️ {{ unmasked.email }}</span>
+          } @else {
+            <span class="pii-val font-mono">🔒 {{ cust.maskedEmail }}</span>
+          }
+        </div>
+
+        <div class="pii-actions">
+          @if (unmaskedData()) {
+            <span class="unmask-timer-badge">
+              ⏱️ Unmasked for Session (DPDP Audit Logged)
+            </span>
+          } @else {
+            <button type="button" class="admin-btn btn-secondary btn-sm" (click)="openUnmaskModal()">
+              👁️ Request DPDP PII Unmask
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- Financials Snapshot Grid -->
+      <div class="metrics-row">
+        <div class="metric-box">
+          <span class="m-lbl">Lifetime Orders</span>
+          <span class="m-val">{{ cust.totalOrdersCount }}</span>
+        </div>
+        <div class="metric-box">
+          <span class="m-lbl">Gross Spend</span>
+          <span class="m-val">₹{{ cust.lifetimeSpendRupees | number }}</span>
+          <span class="m-sub font-mono">{{ cust.lifetimeSpendPaise | number }} paise</span>
+        </div>
+        <div class="metric-box">
+          <span class="m-lbl">Saved Addresses</span>
+          <span class="m-val">{{ cust.addresses.length }}</span>
+        </div>
+        <div class="metric-box">
+          <span class="m-lbl">Account Governance</span>
+          <span class="m-val">{{ cust.status }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="details-tabs">
+      <button
+        type="button"
+        class="tab-btn"
+        [class.active]="activeTab() === 'ORDERS'"
+        (click)="setTab('ORDERS')">
+        🛍️ Orders History ({{ orders().length }})
+      </button>
+      <button
+        type="button"
+        class="tab-btn"
+        [class.active]="activeTab() === 'ADDRESSES'"
+        (click)="setTab('ADDRESSES')">
+        📍 Saved Address Book ({{ cust.addresses.length }})
+      </button>
+      <button
+        type="button"
+        class="tab-btn"
+        [class.active]="activeTab() === 'GOVERNANCE'"
+        (click)="setTab('GOVERNANCE')">
+        ⚙️ Account Governance & Audit
+      </button>
+    </div>
+
+    <!-- TAB 1: CUSTOMER ORDERS (Screen #46) -->
+    @if (activeTab() === 'ORDERS') {
+      <div class="tab-panel">
+        <div class="table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Order Number</th>
+                <th>Order Date</th>
+                <th>Store Outlet</th>
+                <th>Fulfilment Mode</th>
+                <th>Amount (₹)</th>
+                <th>Order Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              @if (orders().length === 0) {
+                <tr>
+                  <td colspan="6" class="text-center py-6 text-muted">No orders recorded for this customer.</td>
+                </tr>
+              } @else {
+                @for (ord of orders(); track ord.id) {
+                  <tr>
+                    <td class="font-mono font-medium">#{{ ord.orderNumber || ord.id }}</td>
+                    <td class="text-muted">{{ ord.createdAt | date:'medium' }}</td>
+                    <td class="font-medium">{{ ord.merchantName }}</td>
+                    <td>
+                      <admin-badge variant="neutral">{{ ord.fulfilmentType || 'Self Pickup' }}</admin-badge>
+                    </td>
+                    <td class="font-bold">₹{{ ord.amount | number:'1.2-2' }}</td>
+                    <td>
+                      <admin-badge [variant]="ord.status === 'COMPLETED' ? 'success' : (ord.status === 'CANCELLED' ? 'danger' : 'info')">
+                        {{ ord.status }}
+                      </admin-badge>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+
+    <!-- TAB 2: SAVED ADDRESSES (Screen #45) -->
+    @if (activeTab() === 'ADDRESSES') {
+      <div class="tab-panel">
+        <div class="addresses-grid">
+          @for (addr of cust.addresses; track addr.id) {
+            <div class="address-card" [class.default]="addr.isDefault">
+              <div class="addr-header">
+                <span class="addr-label font-bold">{{ addr.label }}</span>
+                @if (addr.isDefault) {
+                  <admin-badge variant="success">Default Delivery</admin-badge>
+                }
+              </div>
+              <p class="addr-line">{{ addr.addressLine }}</p>
+              <div class="addr-meta">
+                <span>📍 {{ addr.locality }}, {{ addr.city }} - {{ addr.pincode }}</span>
+                <span class="font-mono text-xs text-muted">GPS: {{ addr.latitude }}, {{ addr.longitude }}</span>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- TAB 3: ACCOUNT GOVERNANCE (Screen #50) -->
+    @if (activeTab() === 'GOVERNANCE') {
+      <div class="tab-panel">
+        <div class="governance-card">
+          <h3>Customer Account Governance Controls</h3>
+          <p>Enforce platform trust & safety policies. Account restrictions freeze active cart checkout while preserving historical invoice records.</p>
+
+          <div class="actions-row mt-4">
+            <button type="button" class="admin-btn btn-warning" (click)="openStatusModal('RESTRICTED')">
+              ⚠️ Place Account on Restriction
+            </button>
+            <button type="button" class="admin-btn btn-danger" (click)="openStatusModal('SUSPENDED')">
+              🚫 Emergency Suspend Account
+            </button>
+            <button type="button" class="admin-btn btn-success" (click)="openStatusModal('ACTIVE')">
+              ✓ Restore Normal Active Access
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+  }
+
+  <!-- Modal: DPDP PII Unmasking Challenge -->
+  @if (isUnmaskModalOpen()) {
+    <div class="modal-backdrop" (click)="closeUnmaskModal()">
+      <div class="modal-panel" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div>
+            <h3>DPDP Act 2023 Statutory PII Unmask Challenge</h3>
+            <p>Access to customer telephone numbers and residential addresses requires statutory purpose justification.</p>
+          </div>
+          <button type="button" class="close-btn" (click)="closeUnmaskModal()">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="compliance-alert">
+            <span class="alert-icon">⚖️</span>
+            <div>
+              <strong>Digital Personal Data Protection Act Mandatory Notice</strong>
+              <p>Your access will be cryptographically hashed, chained into the tamper-evident audit ledger, and made available for regulatory compliance audits.</p>
+            </div>
+          </div>
+
+          <div class="form-group mt-3">
+            <label>Statutory Purpose Code *</label>
+            <select class="form-control" [ngModel]="unmaskPurpose()" (ngModelChange)="unmaskPurpose.set($event)">
+              <option value="ORDER_FULFILLMENT_TRIAGE">Order Fulfillment & Delivery Coordination</option>
+              <option value="REGULATORY_KYC_VERIFICATION">Regulatory Identity Verification</option>
+              <option value="DISPUTE_RESOLUTION">Consumer Dispute & Refund Adjudication</option>
+            </select>
+          </div>
+
+          <div class="form-group mt-3">
+            <label>Investigation Justification * (Min. 5 characters)</label>
+            <textarea
+              class="form-control"
+              rows="3"
+              placeholder="State the explicit customer inquiry ticket or order dispatch issue..."
+              [ngModel]="unmaskJustification()"
+              (ngModelChange)="unmaskJustification.set($event)">
+            </textarea>
+          </div>
+
+          <div class="modal-footer mt-4">
+            <button type="button" class="admin-btn btn-secondary" (click)="closeUnmaskModal()">Cancel</button>
+            <button
+              type="button"
+              class="admin-btn btn-primary"
+              [disabled]="isSubmitting() || unmaskJustification().trim().length < 5"
+              (click)="submitPiiUnmask()">
+              @if (isSubmitting()) { Verifying... } @else { Authenticate & Reveal PII }
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Modal: Account Status Governance -->
+  @if (isStatusModalOpen()) {
+    <div class="modal-backdrop" (click)="closeStatusModal()">
+      <div class="modal-panel" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div>
+            <h3>Change Account Status &rarr; {{ targetStatus() }}</h3>
+            <p>Customer: {{ customer()?.fullName }} ({{ customer()?.id }})</p>
+          </div>
+          <button type="button" class="close-btn" (click)="closeStatusModal()">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Reason Code *</label>
+            <select class="form-control" [ngModel]="statusReasonCode()" (ngModelChange)="statusReasonCode.set($event)">
+              <option value="ABUSIVE_CANCELLATION_PATTERN">Abusive High-Frequency Order Cancellation</option>
+              <option value="SUSPICIOUS_PAYMENT_ACTIVITY">Suspicious Payment Chargeback / Fraud</option>
+              <option value="HARASSMENT_MERCHANT_STAFF">Harassment of Store Counter Personnel</option>
+              <option value="ACCOUNT_VERIFICATION_REQUIRED">Routine Identity Re-Verification</option>
+              <option value="VOLUNTARY_CUSTOMER_REQUEST">Voluntary Customer Account Hold</option>
+            </select>
+          </div>
+
+          <div class="form-group mt-3">
+            <label>Audit Justification *</label>
+            <textarea
+              class="form-control"
+              rows="3"
+              placeholder="Provide case notes for administrative record..."
+              [ngModel]="statusJustification()"
+              (ngModelChange)="statusJustification.set($event)">
+            </textarea>
+          </div>
+
+          <div class="modal-footer mt-4">
+            <button type="button" class="admin-btn btn-secondary" (click)="closeStatusModal()">Cancel</button>
+            <button
+              type="button"
+              class="admin-btn"
+              [class.btn-danger]="targetStatus() === 'SUSPENDED'"
+              [class.btn-warning]="targetStatus() === 'RESTRICTED'"
+              [class.btn-success]="targetStatus() === 'ACTIVE'"
+              [disabled]="isSubmitting() || !statusJustification().trim()"
+              (click)="submitStatusChange()">
+              @if (isSubmitting()) { Applying... } @else { Confirm Status Update }
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+</div>

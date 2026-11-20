@@ -61,7 +61,7 @@ import { AdminThemeService } from '../../core/theme/theme.service';
         </button>
 
         <div class="operator-profile">
-          <div class="operator-info">
+          <div class="operator-info clickable" (click)="navigateToProfile()" title="View & Edit Profile">
             <div class="operator-name-row">
               <span class="operator-name">{{ sessionService.currentOperator()?.name || 'Administrator' }}</span>
               @if (sessionService.isRootProtected()) {
@@ -70,6 +70,14 @@ import { AdminThemeService } from '../../core/theme/theme.service';
             </div>
             <span class="operator-role">{{ sessionService.currentRole() || 'SUPER_ADMIN' }}</span>
           </div>
+
+          <button
+            type="button"
+            class="profile-btn"
+            title="Admin Profile & Security"
+            (click)="navigateToProfile()">
+            👤
+          </button>
 
           <button
             type="button"
@@ -266,7 +274,9 @@ import { AdminThemeService } from '../../core/theme/theme.service';
       color: var(--admin-text-muted);
       font-weight: 600;
     }
-    .lock-btn, .logout-btn {
+    .profile-btn,
+    .lock-btn,
+    .logout-btn {
       background: none;
       border: none;
       color: var(--admin-text-secondary);
@@ -284,8 +294,20 @@ import { AdminThemeService } from '../../core/theme/theme.service';
         color: var(--admin-text-primary);
       }
     }
+    .profile-btn:hover {
+      color: var(--admin-primary);
+    }
     .logout-btn:hover {
       color: var(--admin-danger);
+    }
+    .operator-info.clickable {
+      cursor: pointer;
+      border-radius: var(--admin-radius-sm);
+      padding: 2px 6px;
+      transition: background-color 0.15s ease;
+      &:hover {
+        background-color: var(--admin-bg-hover);
+      }
     }
   `],
 })
@@ -297,6 +319,10 @@ export class AdminTopbarComponent {
 
   @Output() toggleSidebar = new EventEmitter<void>();
   @Output() openCommandSearch = new EventEmitter<void>();
+
+  navigateToProfile(): void {
+    this.router.navigate(['/profile']);
+  }
 
   lockConsole(): void {
     this.sessionService.lockConsole();

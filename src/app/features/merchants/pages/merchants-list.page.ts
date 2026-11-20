@@ -8,6 +8,7 @@ import { PageHeaderComponent, BadgeComponent } from '@nukkadnow/admin-ui';
 import { DataTableComponent, TableColumn } from '@nukkadnow/admin-data-table';
 import { PiiMaskPipe } from '../../../shared/pipes/pii-mask.pipe';
 import { AdminSessionService } from '../../../core/auth/session.service';
+import { AdminApiClient, AdminEndpoints, ApiResponse } from '@nukkadnow/admin-api-client';
 
 @Component({
   selector: 'admin-merchants-list-page',
@@ -19,10 +20,17 @@ import { AdminSessionService } from '../../../core/auth/session.service';
 })
 export class MerchantsListPageComponent implements OnInit {
   private readonly repository = inject(MerchantsRepository);
+  private readonly apiClient = inject(AdminApiClient);
   private readonly router = inject(Router);
   readonly sessionService = inject(AdminSessionService);
 
+  // Sub-tabs (Screens #30, #40, #41)
+  activeSubTab = signal<'MERCHANTS' | 'COMPLAINTS' | 'SUSPENSIONS'>('MERCHANTS');
+
   merchants = signal<MerchantViewModel[]>([]);
+  complaints = signal<any[]>([]);
+  suspensions = signal<any[]>([]);
+
   totalCount = signal<number>(0);
   loading = signal<boolean>(false);
 
@@ -87,6 +95,50 @@ export class MerchantsListPageComponent implements OnInit {
       this.totalCount.set(res.total);
       this.loading.set(false);
     });
+  }
+
+  setSubTab(tab: 'MERCHANTS' | 'COMPLAINTS' | 'SUSPENSIONS'): void {
+    this.activeSubTab.set(tab);
+    if (tab === 'COMPLAINTS' && this.complaints().length === 0) {
+      this.loadComplaints();
+    } else if (tab === 'SUSPENSIONS' && this.suspensions().length === 0) {
+      this.loadSuspensions();
+    }
+  }
+
+  loadComplaints(): void {
+    const city = this.sessionService.geoAssignment()?.cityName || (this.selectedCity !== 'ALL' ? this.selectedCity : '');
+    const query = city ? `?city=${encodeURIComponent(city)}` : '';
+    this.apiClient.get<any>(`${AdminEndpoints.MERCHANT_COMPLAINTS}${query}`).subscribe({
+      next: (res: ApiResponse<any>) => {
+        const items = res.data?.items || (Array.isArray(res.data) ? res.data : []);
+        this.complaints.set(items);
+      },
+    });
+  }
+
+  loadSuspensions(): void {
+    const city = this.sessionService.geoAssignment()?.cityName || (this.selectedCity !== 'ALL' ? this.selectedCity : '');
+    const query = city ? `?city=${encodeURIComponent(city)}` : '';
+    this.apiClient.get<any>(`${AdminEndpoints.MERCHANT_SUSPENSIONS}${query}`).subscribe({
+      next: (res: ApiResponse<any>) => {
+        const items = res.data?.items || (Array.isArray(res.data) ? res.data : []);
+        this.suspensions.set(items);
+      },
+    });
+  }
+
+  resolveComplaint(complaint: any, action: string): void {
+    this.apiClient
+      .post<any>(AdminEndpoints.MERCHANT_COMPLAINT_RESOLVE(complaint.merchantId, complaint.id), {
+        resolutionAction: action,
+        notes: `Complaint ${complaint.id} adjudicated with action: ${action}`,
+      })
+      .subscribe({
+        next: () => {
+          this.loadComplaints();
+        },
+      });
   }
 
   onFilterChange(): void {

@@ -1,13 +1,38 @@
 <div class="merchants-page-container">
   <admin-page-header
-    title="Merchant Master Registry"
-    [subtitle]="'Registered seller businesses operating across ' + activeCityName() + ' localities and retail categories'"
+    title="Merchant Master Registry & Governance"
+    [subtitle]="'Registered seller businesses, complaints escalation triage, and suspension logs across ' + activeCityName()"
     breadcrumb="Console / Merchants">
     <div actions>
-      <button type="button" class="admin-btn btn-secondary btn-sm" (click)="loadMerchants()">↻ Refresh</button>
+      <button type="button" class="admin-btn btn-secondary btn-sm" (click)="loadMerchants(); loadComplaints(); loadSuspensions()">↻ Refresh</button>
       <button type="button" class="admin-btn btn-primary btn-sm" (click)="exportCsv()">Export CSV</button>
     </div>
   </admin-page-header>
+
+  <!-- Merchant Module Sub-Tabs (Screens #30, #40, #41) -->
+  <div class="merchant-sub-tabs">
+    <button
+      type="button"
+      class="subtab-btn"
+      [class.active]="activeSubTab() === 'MERCHANTS'"
+      (click)="setSubTab('MERCHANTS')">
+      🏬 Store Directory (#30)
+    </button>
+    <button
+      type="button"
+      class="subtab-btn"
+      [class.active]="activeSubTab() === 'COMPLAINTS'"
+      (click)="setSubTab('COMPLAINTS')">
+      ⚠️ Complaints & Escalations (#40)
+    </button>
+    <button
+      type="button"
+      class="subtab-btn"
+      [class.active]="activeSubTab() === 'SUSPENSIONS'"
+      (click)="setSubTab('SUSPENSIONS')">
+      🚫 Suspension & Probation Log (#41)
+    </button>
+  </div>
 
   <!-- City Scope Filter Bar (for Root & Super Admin) -->
   @if (sessionService.isRoot() || sessionService.isSuperAdmin()) {
@@ -27,55 +52,216 @@
     </div>
   }
 
-  <!-- Status Quick-Filter Tabs -->
-  <div class="status-tabs-row">
-    <button type="button" class="status-tab" [class.active]="selectedStatus === ''" (click)="setStatusTab('')">All Stores ({{ totalCount() }})</button>
-    <button type="button" class="status-tab" [class.active]="selectedStatus === 'ACTIVE'" (click)="setStatusTab('ACTIVE')">✓ Active Stores</button>
-    <button type="button" class="status-tab" [class.active]="selectedStatus === 'PENDING_VERIFICATION'" (click)="setStatusTab('PENDING_VERIFICATION')">⏳ Pending Verification</button>
-    <button type="button" class="status-tab" [class.active]="selectedStatus === 'SUSPENDED'" (click)="setStatusTab('SUSPENDED')">🚫 Suspended</button>
-  </div>
-
-  <!-- Filter & Search Toolbar -->
-  <div class="filter-toolbar">
-    <div class="search-input-box">
-      <span class="search-icon">🔍</span>
-      <input
-        type="text"
-        class="admin-input"
-        placeholder="Search merchant name, legal entity, or locality..."
-        [(ngModel)]="searchQuery"
-        (ngModelChange)="onFilterChange()">
+  <!-- TAB 1: STORE DIRECTORY (Screen #30) -->
+  @if (activeSubTab() === 'MERCHANTS') {
+    <!-- Status Quick-Filter Tabs -->
+    <div class="status-tabs-row">
+      <button type="button" class="status-tab" [class.active]="selectedStatus === ''" (click)="setStatusTab('')">All Stores ({{ totalCount() }})</button>
+      <button type="button" class="status-tab" [class.active]="selectedStatus === 'ACTIVE'" (click)="setStatusTab('ACTIVE')">✓ Active Stores</button>
+      <button type="button" class="status-tab" [class.active]="selectedStatus === 'PENDING_VERIFICATION'" (click)="setStatusTab('PENDING_VERIFICATION')">⏳ Pending Verification</button>
+      <button type="button" class="status-tab" [class.active]="selectedStatus === 'SUSPENDED'" (click)="setStatusTab('SUSPENDED')">🚫 Suspended</button>
     </div>
 
-    <div class="filter-controls">
-      <select class="admin-select" [(ngModel)]="selectedLocality" (change)="onFilterChange()">
-        <option value="">All {{ activeCityName() }} Localities</option>
-        @for (loc of availableLocalities(); track loc) {
-          <option [value]="loc">{{ loc }}</option>
-        }
-      </select>
+    <!-- Filter & Search Toolbar -->
+    <div class="filter-toolbar">
+      <div class="search-input-box">
+        <span class="search-icon">🔍</span>
+        <input
+          type="text"
+          class="admin-input"
+          placeholder="Search merchant name, legal entity, or locality..."
+          [(ngModel)]="searchQuery"
+          (ngModelChange)="onFilterChange()">
+      </div>
 
-      <select class="admin-select" [(ngModel)]="selectedMode" (change)="onFilterChange()">
-        <option value="">All Seller Modes</option>
-        <option value="RETAIL">Retail / Kirana</option>
-        <option value="FOOD_STALL">Food & Dairy Stall</option>
-        <option value="HOME_MAKER">Home Maker (Protected)</option>
-        <option value="ARTISAN">Artisan Maker</option>
-        <option value="SEASONAL">Seasonal Pop-up</option>
-      </select>
+      <div class="filter-controls">
+        <select class="admin-select" [(ngModel)]="selectedLocality" (change)="onFilterChange()">
+          <option value="">All {{ activeCityName() }} Localities</option>
+          @for (loc of availableLocalities(); track loc) {
+            <option [value]="loc">{{ loc }}</option>
+          }
+        </select>
 
-      <button type="button" class="admin-btn btn-secondary btn-sm" (click)="resetFilters()">Clear Filters</button>
+        <select class="admin-select" [(ngModel)]="selectedMode" (change)="onFilterChange()">
+          <option value="">All Seller Modes</option>
+          <option value="RETAIL">Retail / Kirana</option>
+          <option value="FOOD_STALL">Food & Dairy Stall</option>
+          <option value="HOME_MAKER">Home Maker (Protected)</option>
+          <option value="ARTISAN">Artisan Maker</option>
+          <option value="SEASONAL">Seasonal Pop-up</option>
+        </select>
+
+        <button type="button" class="admin-btn btn-secondary btn-sm" (click)="resetFilters()">Clear Filters</button>
+      </div>
     </div>
-  </div>
 
-  <!-- Data Table with Custom Status & Mode Columns -->
-  <div class="table-card">
-    <admin-data-table
-      [columns]="tableColumns"
-      [data]="merchants()"
-      [totalCount]="totalCount()"
-      [loading]="loading()"
-      (rowClick)="onRowClick($event)">
-    </admin-data-table>
-  </div>
+    <!-- Data Table with Custom Status & Mode Columns -->
+    <div class="table-card">
+      <admin-data-table
+        [columns]="tableColumns"
+        [data]="merchants()"
+        [totalCount]="totalCount()"
+        [loading]="loading()"
+        (rowClick)="onRowClick($event)">
+      </admin-data-table>
+    </div>
+  }
+
+  <!-- TAB 2: MERCHANT COMPLAINTS & ESCALATIONS (Screen #40) -->
+  @if (activeSubTab() === 'COMPLAINTS') {
+    <div class="table-card">
+      <div class="card-header-bar">
+        <div>
+          <h3>Merchant Complaints & Escalations Triage Queue</h3>
+          <p>Customer and peer dispute cases: overcharging MRP, product spoilage, and fulfillment refusals.</p>
+        </div>
+      </div>
+
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Ticket / Case</th>
+            <th>Merchant Target</th>
+            <th>Territory</th>
+            <th>Complainant</th>
+            <th>Category & Issue</th>
+            <th>Severity</th>
+            <th>SLA Deadline</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (complaints().length === 0) {
+            <tr>
+              <td colspan="9" class="text-center py-6 text-muted">No merchant complaints currently pending for this territory.</td>
+            </tr>
+          } @else {
+            @for (c of complaints(); track c.id) {
+              <tr>
+                <td>
+                  <div class="font-mono font-bold">{{ c.ticketNumber }}</div>
+                  <div class="text-muted text-xs font-mono">{{ c.id }}</div>
+                </td>
+                <td>
+                  <div class="font-medium">{{ c.merchantName }}</div>
+                  <div class="text-muted text-xs">{{ c.outletName }}</div>
+                </td>
+                <td>
+                  <admin-badge variant="neutral">📍 {{ c.city }}</admin-badge>
+                </td>
+                <td>
+                  <div class="font-medium">{{ c.complainantName }}</div>
+                  <div class="text-muted text-xs">{{ c.complainantPhone }}</div>
+                </td>
+                <td>
+                  <div class="font-medium">{{ c.category }}</div>
+                  <div class="text-muted text-xs">{{ c.summary }}</div>
+                </td>
+                <td>
+                  <span class="sev-badge" [class.p1]="c.severity === 'P1_CRITICAL'" [class.p2]="c.severity === 'P2_HIGH'">
+                    {{ c.severity }}
+                  </span>
+                </td>
+                <td>
+                  <span class="sla-text" [class.urgent]="c.slaHoursRemaining <= 2">
+                    {{ c.slaHoursRemaining }}h remaining
+                  </span>
+                </td>
+                <td>
+                  @if (c.status === 'RESOLVED') {
+                    <admin-badge variant="success">Resolved</admin-badge>
+                  } @else if (c.status === 'UNDER_INVESTIGATION') {
+                    <admin-badge variant="warning">Under Review</admin-badge>
+                  } @else {
+                    <admin-badge variant="info">{{ c.status }}</admin-badge>
+                  }
+                </td>
+                <td>
+                  @if (c.status !== 'RESOLVED') {
+                    <div class="action-btn-group">
+                      <button type="button" class="admin-btn btn-warning btn-sm" (click)="resolveComplaint(c, 'ISSUE_FORMAL_WARNING')">
+                        ⚠️ Warn Store
+                      </button>
+                      <button type="button" class="admin-btn btn-secondary btn-sm" (click)="resolveComplaint(c, 'EXONERATE_DISMISS')">
+                        Dismiss
+                      </button>
+                    </div>
+                  } @else {
+                    <span class="text-muted text-xs">{{ c.resolutionSummary }}</span>
+                  }
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- TAB 3: MERCHANT SUSPENSION & PROBATION AUDIT LOG (Screen #41) -->
+  @if (activeSubTab() === 'SUSPENSIONS') {
+    <div class="table-card">
+      <div class="card-header-bar">
+        <div>
+          <h3>Merchant Disciplinary Action & Suspension History</h3>
+          <p>Cryptographic immutable audit record of store freezes, statutory warnings, and probation enforcements.</p>
+        </div>
+      </div>
+
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Disciplinary Record</th>
+            <th>Merchant Store</th>
+            <th>City</th>
+            <th>Sanction Type</th>
+            <th>Reason Code</th>
+            <th>Enforcement Notes</th>
+            <th>Approved By</th>
+            <th>Date & Time</th>
+            <th>Appeal Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (suspensions().length === 0) {
+            <tr>
+              <td colspan="9" class="text-center py-6 text-muted">No disciplinary actions recorded in this territory.</td>
+            </tr>
+          } @else {
+            @for (s of suspensions(); track s.id) {
+              <tr>
+                <td class="font-mono font-bold">{{ s.id }}</td>
+                <td>
+                  <div class="font-medium">{{ s.merchantName }}</div>
+                  <div class="text-muted text-xs">{{ s.outletName }}</div>
+                </td>
+                <td>
+                  <admin-badge variant="neutral">📍 {{ s.city }}</admin-badge>
+                </td>
+                <td>
+                  <span class="sanction-badge" [class.freeze]="s.actionType.includes('FREEZE') || s.actionType.includes('BAN')" [class.reinstated]="s.actionType === 'REINSTATED'">
+                    {{ s.actionType }}
+                  </span>
+                </td>
+                <td>
+                  <span class="reason-tag">{{ s.reasonCode }}</span>
+                </td>
+                <td>
+                  <div class="text-xs">{{ s.notes }}</div>
+                </td>
+                <td class="text-xs text-muted font-medium">{{ s.enforcedBy }}</td>
+                <td class="text-xs text-muted font-mono">{{ s.enforcedAt | date:'medium' }}</td>
+                <td>
+                  <admin-badge [variant]="s.appealStatus === 'UPHELD' ? 'success' : 'neutral'">
+                    {{ s.appealStatus }}
+                  </admin-badge>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  }
 </div>

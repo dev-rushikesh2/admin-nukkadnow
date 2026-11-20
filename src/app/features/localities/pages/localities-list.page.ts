@@ -3,16 +3,17 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { LocalitiesStore } from '../state/localities.store';
-import { PageHeaderComponent } from '@nukkadnow/admin-ui';
+import { PageHeaderComponent, BadgeComponent } from '@nukkadnow/admin-ui';
 import { DataTableComponent, TableColumn } from '@nukkadnow/admin-data-table';
 import { LocalityViewModel } from '../models/localities-view.model';
 import { LocalitiesStatusChipComponent } from '../components/localities-status-chip.component';
 import { AdminSessionService } from '../../../core/auth/session.service';
+import { AdminApiClient, AdminEndpoints } from '@nukkadnow/admin-api-client';
 
 @Component({
   selector: 'admin-localities-list-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, PageHeaderComponent, DataTableComponent, LocalitiesStatusChipComponent],
+  imports: [CommonModule, FormsModule, PageHeaderComponent, BadgeComponent, DataTableComponent, LocalitiesStatusChipComponent],
   templateUrl: './localities-list.page.html',
   styleUrls: ['./localities-list.page.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -20,13 +21,27 @@ import { AdminSessionService } from '../../../core/auth/session.service';
 export class LocalitiesListPageComponent implements OnInit {
   readonly store = inject(LocalitiesStore);
   private readonly router = inject(Router);
+  private readonly apiClient = inject(AdminApiClient);
   readonly sessionService = inject(AdminSessionService);
 
+  readonly activeSubTab = signal<'LOCALITIES' | 'DISTRICTS' | 'STATES' | 'COUNTRIES' | 'GEOJSON_IMPORT'>('LOCALITIES');
   readonly selectedCity = signal<string>('ALL');
   readonly selectedStatus = signal<string>('ALL');
   readonly searchQuery = signal<string>('');
   readonly isAddModalOpen = signal<boolean>(false);
   readonly isSubmitting = signal<boolean>(false);
+
+  // Geographic Hierarchy State
+  readonly countriesList = signal<any[]>([]);
+  readonly statesList = signal<any[]>([]);
+  readonly districtsList = signal<any[]>([]);
+
+  // GeoJSON Import State
+  importGeoJsonText = '';
+  importCityCode = 'IN-MH-NGP';
+  readonly isImporting = signal<boolean>(false);
+  readonly importSuccessMessage = signal<string | null>(null);
+  readonly importErrorMessage = signal<string | null>(null);
 
   // New Zone Form Model
   newZone = {
@@ -98,8 +113,90 @@ export class LocalitiesListPageComponent implements OnInit {
     if (geo?.cityName) {
       this.selectedCity.set(geo.cityName);
       this.newZone.city = geo.cityName;
+      this.importCityCode = geo.cityId || 'IN-MH-NGP';
     }
     this.store.loadItems();
+    this.loadHierarchyData();
+  }
+
+  setSubTab(tab: 'LOCALITIES' | 'DISTRICTS' | 'STATES' | 'COUNTRIES' | 'GEOJSON_IMPORT'): void {
+    this.activeSubTab.set(tab);
+  }
+
+  loadHierarchyData(): void {
+    this.apiClient.get<any>(AdminEndpoints.GEO_COUNTRIES).subscribe({
+      next: (res) => this.countriesList.set(res.data?.items || res.data || [])
+    });
+    this.apiClient.get<any>(AdminEndpoints.GEO_STATES).subscribe({
+      next: (res) => this.statesList.set(res.data?.items || res.data || [])
+    });
+    this.apiClient.get<any>(AdminEndpoints.GEO_DISTRICTS).subscribe({
+      next: (res) => this.districtsList.set(res.data?.items || res.data || [])
+    });
+  }
+
+  submitGeoJsonImport(): void {
+    this.importErrorMessage.set(null);
+    this.importSuccessMessage.set(null);
+
+    if (!this.importGeoJsonText.trim()) {
+      this.importErrorMessage.set('Please paste a valid GeoJSON FeatureCollection string.');
+      return;
+    }
+
+    let parsed: any;
+    try {
+      parsed = JSON.parse(this.importGeoJsonText);
+    } catch {
+      this.importErrorMessage.set('Invalid JSON format. Check syntax and quotation marks.');
+      return;
+    }
+
+    this.isImporting.set(true);
+    this.apiClient.post<any>(AdminEndpoints.GEO_IMPORT_GEOJSON, {
+      cityCode: this.importCityCode,
+      geoJson: parsed,
+    }).subscribe({
+      next: (res) => {
+        this.isImporting.set(false);
+        this.importSuccessMessage.set(`Successfully imported ${res.data?.importedCount || 1} micro-market localities!`);
+        this.importGeoJsonText = '';
+        this.store.loadItems();
+        setTimeout(() => this.setSubTab('LOCALITIES'), 1500);
+      },
+      error: (err) => {
+        this.isImporting.set(false);
+        this.importErrorMessage.set(err.message || 'Failed to import GeoJSON features.');
+      }
+    });
+  }
+
+  loadSampleGeoJson(): void {
+    this.importGeoJsonText = JSON.stringify({
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          properties: {
+            name: "Manish Nagar & Besa",
+            pincode: "440015",
+            deliveryRadiusKm: 6
+          },
+          geometry: {
+            type: "Polygon",
+            coordinates: [
+              [
+                [79.075, 21.105],
+                [79.085, 21.106],
+                [79.084, 21.095],
+                [79.074, 21.094],
+                [79.075, 21.105]
+              ]
+            ]
+          }
+        }
+      ]
+    }, null, 2);
   }
 
   onCityChange(city: string): void {

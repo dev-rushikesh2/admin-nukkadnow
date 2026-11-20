@@ -1,0 +1,213 @@
+<div class="customers-page-container">
+  <admin-page-header
+    [title]="'Customer Directory & Accounts — ' + activeCityName()"
+    subtitle="Manage consumer accounts, customer cohorts, privacy-preserving DPDP masked PII, and purchase telemetry."
+    breadcrumb="Console / Customer Management">
+    <div actions>
+      <button type="button" class="admin-btn btn-secondary btn-sm" (click)="refreshAll()">↻ Refresh</button>
+      <button type="button" class="admin-btn btn-primary btn-sm" (click)="exportCsv()">Export CSV</button>
+    </div>
+  </admin-page-header>
+
+  <!-- City Territory Selector Bar (Root & Super Admin) -->
+  @if (sessionService.isRoot() || sessionService.isSuperAdmin()) {
+    <div class="city-selector-bar">
+      <span class="bar-lbl">Territory Filter:</span>
+      <div class="city-pills">
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'ALL'" (click)="setCity('ALL')">All Cities (Global)</button>
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'Nagpur'" (click)="setCity('Nagpur')">📍 Nagpur</button>
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'Akola'" (click)="setCity('Akola')">📍 Akola</button>
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'Amravati'" (click)="setCity('Amravati')">📍 Amravati</button>
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'Pune'" (click)="setCity('Pune')">📍 Pune</button>
+      </div>
+    </div>
+  } @else if (sessionService.geoAssignment()) {
+    <div class="geo-locked-banner">
+      <span>📍 Managing customer records strictly within <strong>{{ sessionService.geoAssignment()?.cityName }} Municipal Territory</strong></span>
+    </div>
+  }
+
+  <!-- Screen #42: Customer Analytics & Growth Metrics -->
+  @if (overview()) {
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-header">
+          <span class="metric-title">Registered Customers</span>
+          <span class="metric-icon">👥</span>
+        </div>
+        <div class="metric-value">{{ overview()?.totalCustomers }}</div>
+        <div class="metric-sub">Platform consumer accounts</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-header">
+          <span class="metric-title">Active Users (MAU)</span>
+          <span class="metric-icon">📱</span>
+        </div>
+        <div class="metric-value text-success">{{ overview()?.activeMonthlyUsers }}</div>
+        <div class="metric-sub">Monthly active transacting users</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-header">
+          <span class="metric-title">Repeat Order Rate</span>
+          <span class="metric-icon">🔄</span>
+        </div>
+        <div class="metric-value text-primary">{{ overview()?.repeatOrderRatePct }}%</div>
+        <div class="metric-sub">Multi-order retention rate</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-header">
+          <span class="metric-title">Average Lifetime Value</span>
+          <span class="metric-icon">💎</span>
+        </div>
+        <div class="metric-value">₹{{ (overview()?.averageLtvRupees || 0) | number }}</div>
+        <div class="metric-sub">{{ overview()?.averageLtvPaise | number }} paise</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-header">
+          <span class="metric-title">VIP Cohort</span>
+          <span class="metric-icon">⭐</span>
+        </div>
+        <div class="metric-value text-warning">{{ overview()?.vipCustomersCount }}</div>
+        <div class="metric-sub">Top 10% gross volume spenders</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-header">
+          <span class="metric-title">DPDP Privacy Compliance</span>
+          <span class="metric-icon">🛡️</span>
+        </div>
+        <div class="metric-value text-success">{{ overview()?.dpdpConsentCompliancePct }}%</div>
+        <div class="metric-sub">Statutory consent on file</div>
+      </div>
+    </div>
+  }
+
+  <!-- Screen #47: Customer Segments & Cohort Filter Tabs -->
+  <div class="segment-tabs-row">
+    <button type="button" class="segment-tab" [class.active]="selectedSegment() === 'ALL'" (click)="setSegmentTab('ALL')">
+      All Customers ({{ totalCount() }})
+    </button>
+    <button type="button" class="segment-tab" [class.active]="selectedSegment() === 'VIP'" (click)="setSegmentTab('VIP')">
+      ⭐ VIP Spenders
+    </button>
+    <button type="button" class="segment-tab" [class.active]="selectedSegment() === 'REPEAT'" (click)="setSegmentTab('REPEAT')">
+      🔄 Repeat Buyers
+    </button>
+    <button type="button" class="segment-tab" [class.active]="selectedSegment() === 'ACTIVE'" (click)="setSegmentTab('ACTIVE')">
+      ✓ Active Users
+    </button>
+    <button type="button" class="segment-tab" [class.active]="selectedSegment() === 'NEW'" (click)="setSegmentTab('NEW')">
+      🌱 First-Time New
+    </button>
+    <button type="button" class="segment-tab" [class.active]="selectedSegment() === 'INACTIVE'" (click)="setSegmentTab('INACTIVE')">
+      ⏳ Inactive / At-Risk
+    </button>
+  </div>
+
+  <!-- Filter & Search Toolbar -->
+  <div class="filter-toolbar">
+    <div class="search-input-box">
+      <span class="search-icon">🔍</span>
+      <input
+        type="text"
+        class="admin-input"
+        placeholder="Search customer name, ID, or locality..."
+        [ngModel]="searchQuery()"
+        (ngModelChange)="searchQuery.set($event); loadCustomers()" />
+    </div>
+
+    <div class="filter-controls">
+      <select class="admin-select" [ngModel]="selectedStatus()" (ngModelChange)="selectedStatus.set($event); loadCustomers()">
+        <option value="ALL">All Account Statuses</option>
+        <option value="ACTIVE">Active Accounts</option>
+        <option value="RESTRICTED">Restricted Accounts</option>
+        <option value="SUSPENDED">Suspended Accounts</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Screen #43: Customer Master Directory Table -->
+  <div class="table-container">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>Customer ID</th>
+          <th>Customer Name</th>
+          <th>Phone (DPDP Masked)</th>
+          <th>Email (Masked)</th>
+          <th>City & Primary Locality</th>
+          <th>Cohort</th>
+          <th>Orders Count</th>
+          <th>Lifetime Spend (₹)</th>
+          <th>Account Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (isLoading()) {
+          <tr>
+            <td colspan="10" class="text-center py-8">Loading customer directory...</td>
+          </tr>
+        } @else if (customers().length === 0) {
+          <tr>
+            <td colspan="10" class="text-center py-8 text-muted">No customer accounts found matching criteria.</td>
+          </tr>
+        } @else {
+          @for (c of customers(); track c.id) {
+            <tr class="clickable-row" (click)="viewDetails(c.id)">
+              <td class="font-mono font-medium">{{ c.id }}</td>
+              <td>
+                <div class="font-bold">{{ c.fullName }}</div>
+                <div class="text-muted text-xs">Registered {{ c.registeredAt | date:'mediumDate' }}</div>
+              </td>
+              <td class="font-mono text-muted">
+                <span class="pii-tag">🔒 {{ c.maskedPhone }}</span>
+              </td>
+              <td class="font-mono text-muted text-xs">
+                {{ c.maskedEmail }}
+              </td>
+              <td>
+                <admin-badge variant="neutral">📍 {{ c.city }}</admin-badge>
+                <div class="text-muted text-xs mt-1">{{ c.primaryLocality }} ({{ c.addressesCount }} addr)</div>
+              </td>
+              <td>
+                @if (c.segment === 'VIP') {
+                  <span class="cohort-pill vip">⭐ VIP</span>
+                } @else if (c.segment === 'REPEAT') {
+                  <span class="cohort-pill repeat">🔄 Repeat</span>
+                } @else if (c.segment === 'NEW') {
+                  <span class="cohort-pill new">🌱 New</span>
+                } @else {
+                  <span class="cohort-pill active">Active</span>
+                }
+              </td>
+              <td class="font-mono font-medium">{{ c.totalOrdersCount }} orders</td>
+              <td>
+                <div class="font-bold">₹{{ (c.lifetimeSpendPaise / 100) | number:'1.2-2' }}</div>
+                <div class="text-muted text-xs">{{ c.lifetimeSpendPaise | number }} paise</div>
+              </td>
+              <td>
+                @if (c.status === 'ACTIVE') {
+                  <admin-badge variant="success">Active</admin-badge>
+                } @else if (c.status === 'RESTRICTED') {
+                  <admin-badge variant="warning">Restricted</admin-badge>
+                } @else {
+                  <admin-badge variant="danger">Suspended</admin-badge>
+                }
+              </td>
+              <td>
+                <button type="button" class="admin-btn btn-secondary btn-sm" (click)="$event.stopPropagation(); viewDetails(c.id)">
+                  View 360° Profile &rarr;
+                </button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

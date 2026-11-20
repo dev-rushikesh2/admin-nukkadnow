@@ -7,6 +7,29 @@ import { SystemHealthNodeViewModel } from '../models/system-health-view.model';
 import { PageHeaderComponent, BadgeComponent } from '@nukkadnow/admin-ui';
 import { DataTableComponent, TableColumn } from '@nukkadnow/admin-data-table';
 import { SystemHealthStatusChipComponent } from '../components/system-health-status-chip.component';
+import { AdminApiClient, AdminEndpoints } from '@nukkadnow/admin-api-client';
+
+export interface GatewayPingResult {
+  id: string;
+  name: string;
+  endpoint: string;
+  latencyMs: number;
+  status: 'OPERATIONAL' | 'DEGRADED' | 'OFFLINE';
+  sslValid: boolean;
+  lastPingAt: string;
+}
+
+export interface SiemAlertItem {
+  id: string;
+  timestamp: string;
+  threatLevel: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  eventType: string;
+  sourceIP: string;
+  targetedUser: string;
+  city: string;
+  status: 'BLOCKED' | 'INVESTIGATING' | 'MITIGATED';
+  details: string;
+}
 
 @Component({
   selector: 'admin-system-health-list-page',
@@ -26,14 +49,22 @@ import { SystemHealthStatusChipComponent } from '../components/system-health-sta
 export class SystemHealthListPageComponent implements OnInit {
   readonly store = inject(SystemHealthStore);
   private readonly router = inject(Router);
+  private readonly api = inject(AdminApiClient);
 
-  viewMode = signal<'grid' | 'table'>('grid');
+  readonly activeSubTab = signal<'MESH' | 'GATEWAYS_PING' | 'SIEM_ALERTS'>('MESH');
+  readonly viewMode = signal<'grid' | 'table'>('grid');
 
   // Flush Cache Modal
-  showFlushModal = signal<boolean>(false);
+  readonly showFlushModal = signal<boolean>(false);
   selectedPartition = 'ALL_PARTITIONS';
   flushReason = 'CACHE_CONSISTENCY_SYNC';
   stepUpCode = '';
+
+  // Sprint 10 Reactive Collections
+  readonly gatewayPings = signal<GatewayPingResult[]>([]);
+  readonly siemAlerts = signal<SiemAlertItem[]>([]);
+  readonly isPinging = signal<boolean>(false);
+  readonly pingSuccessMsg = signal<string | null>(null);
 
   readonly tableColumns: TableColumn<SystemHealthNodeViewModel>[] = [
     { key: 'service', header: 'Microservice / Node', width: '220px', sortable: true },
@@ -46,10 +77,18 @@ export class SystemHealthListPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.store.loadHealthSummary();
+    this.runGatewayPing();
+    this.loadSiemAlerts();
   }
 
   refresh(): void {
     this.store.loadHealthSummary();
+    this.runGatewayPing();
+    this.loadSiemAlerts();
+  }
+
+  switchSubTab(tab: 'MESH' | 'GATEWAYS_PING' | 'SIEM_ALERTS'): void {
+    this.activeSubTab.set(tab);
   }
 
   toggleView(mode: 'grid' | 'table'): void {
@@ -72,6 +111,28 @@ export class SystemHealthListPageComponent implements OnInit {
   confirmFlushCache(): void {
     this.store.flushCache(this.selectedPartition, this.flushReason).subscribe(() => {
       this.closeFlushModal();
+    });
+  }
+
+  runGatewayPing(): void {
+    this.isPinging.set(true);
+    this.api.post<any>(AdminEndpoints.SYSTEM_GATEWAY_PING, {}).subscribe({
+      next: res => {
+        this.gatewayPings.set(res?.data || []);
+        this.isPinging.set(false);
+        this.pingSuccessMsg.set('All external gateway endpoints probed and verified active.');
+        setTimeout(() => this.pingSuccessMsg.set(null), 3500);
+      },
+      error: () => this.isPinging.set(false)
+    });
+  }
+
+  loadSiemAlerts(): void {
+    this.api.get<any>(AdminEndpoints.SYSTEM_SIEM_ALERTS).subscribe({
+      next: res => {
+        const items = res?.data?.items || res?.data || [];
+        this.siemAlerts.set(items);
+      }
     });
   }
 

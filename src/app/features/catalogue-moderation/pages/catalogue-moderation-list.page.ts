@@ -3,14 +3,15 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CatalogueModerationStore } from '../state/catalogue-moderation.store';
-import { PageHeaderComponent } from '@nukkadnow/admin-ui';
+import { PageHeaderComponent, BadgeComponent } from '@nukkadnow/admin-ui';
 import { DataTableComponent, TableColumn } from '@nukkadnow/admin-data-table';
 import { CatalogItemViewModel } from '../models/catalogue-moderation-view.model';
+import { AdminApiClient, AdminEndpoints, ApiResponse } from '@nukkadnow/admin-api-client';
 
 @Component({
   selector: 'admin-catalogue-moderation-list-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, PageHeaderComponent, DataTableComponent],
+  imports: [CommonModule, FormsModule, PageHeaderComponent, BadgeComponent, DataTableComponent],
   templateUrl: './catalogue-moderation-list.page.html',
   styleUrls: ['./catalogue-moderation-list.page.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -18,6 +19,13 @@ import { CatalogItemViewModel } from '../models/catalogue-moderation-view.model'
 export class CatalogueModerationListPageComponent implements OnInit {
   readonly store = inject(CatalogueModerationStore);
   private readonly router = inject(Router);
+  private readonly apiClient = inject(AdminApiClient);
+
+  // Sub-tabs (Screens #67, #71, #72)
+  activeTab = signal<'PRICE_CAPS' | 'RESTRICTED' | 'REPORTED'>('PRICE_CAPS');
+
+  restrictedPolicies = signal<any[]>([]);
+  reportedItems = signal<any[]>([]);
 
   // Price Cap Form state
   readonly showAddCapForm = signal<boolean>(false);
@@ -41,8 +49,38 @@ export class CatalogueModerationListPageComponent implements OnInit {
     this.store.loadItems();
   }
 
+  setTab(tab: 'PRICE_CAPS' | 'RESTRICTED' | 'REPORTED'): void {
+    this.activeTab.set(tab);
+    if (tab === 'RESTRICTED' && this.restrictedPolicies().length === 0) {
+      this.loadRestrictedPolicies();
+    } else if (tab === 'REPORTED' && this.reportedItems().length === 0) {
+      this.loadReportedItems();
+    }
+  }
+
+  loadRestrictedPolicies(): void {
+    this.apiClient.get<any>(AdminEndpoints.CATALOG_RESTRICTED_POLICIES).subscribe({
+      next: (res: ApiResponse<any>) => {
+        if (res.data) {
+          this.restrictedPolicies.set(Array.isArray(res.data) ? res.data : []);
+        }
+      },
+    });
+  }
+
+  loadReportedItems(): void {
+    this.apiClient.get<any>(AdminEndpoints.CATALOG_REPORTED_ITEMS).subscribe({
+      next: (res: ApiResponse<any>) => {
+        const items = res.data?.items || (Array.isArray(res.data) ? res.data : []);
+        this.reportedItems.set(items);
+      },
+    });
+  }
+
   refresh(): void {
     this.store.loadItems();
+    if (this.activeTab() === 'RESTRICTED') this.loadRestrictedPolicies();
+    else if (this.activeTab() === 'REPORTED') this.loadReportedItems();
   }
 
   toggleAddCap(): void {

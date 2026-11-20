@@ -79,4 +79,61 @@ export const AdminEndpoints = {
   PLATFORM_PERMISSIONS: '/platform/permissions',
   PLATFORM_CITIES: '/platform/cities',
   AUTH_SWITCH_ROLE: '/auth/switch-role',
+
+  // Sprint 6: Global Omni-Search, Geo Hierarchy, Personas & Profile
+  SEARCH: '/search',
+  GEO_HIERARCHY: '/geo/hierarchy',
+  GEO_COUNTRIES: '/geo/countries',
+  GEO_STATES: '/geo/states',
+  GEO_DISTRICTS: '/geo/districts',
+  GEO_IMPORT_GEOJSON: '/geo/import-geojson',
+  OVERVIEW_PERSONAS: '/overview/personas',
+  PROFILE_ME: '/me',
+  PROFILE_CHANGE_PASSWORD: '/me/change-password',
+  PROFILE_SESSIONS: '/me/sessions',
+  PROFILE_ACTIVITY: '/me/activity',
+
+  // Sprint 7: Inventory Telemetry & Merchant Governance
+  INVENTORY_OVERVIEW: '/inventory/overview',
+  INVENTORY_STOCKS: '/inventory/stocks',
+  INVENTORY_LOW_STOCK: '/inventory/low-stock',
+  INVENTORY_MOVEMENTS: '/inventory/movements',
+  INVENTORY_RECONCILIATIONS: '/inventory/reconciliations',
+  INVENTORY_RECONCILIATION_RESOLVE: (id: string) => `/inventory/reconciliations/${id}/resolve`,
+  INVENTORY_DATA_QUALITY: '/inventory/data-quality',
+  MERCHANT_COMPLAINTS: '/merchants/complaints',
+  MERCHANT_COMPLAINTS_BY_MERCHANT: (id: string) => `/merchants/${id}/complaints`,
+  MERCHANT_COMPLAINT_RESOLVE: (merchantId: string, complaintId: string) => `/merchants/${merchantId}/complaints/${complaintId}/resolve`,
+  MERCHANT_SUSPENSIONS: '/merchants/suspensions',
+  MERCHANT_SUSPENSION_LOG: (id: string) => `/merchants/${id}/suspension-log`,
+
+  // Sprint 8: Customer Directory & Helpdesk Pro
+  CUSTOMERS_OVERVIEW: '/customers/overview',
+  CUSTOMERS: '/customers',
+  CUSTOMER_BY_ID: (id: string) => `/customers/${id}`,
+  CUSTOMER_UNMASK_PII: (id: string) => `/customers/${id}/unmask-pii`,
+  CUSTOMER_ORDERS: (id: string) => `/customers/${id}/orders`,
+  CUSTOMER_UPDATE_STATUS: (id: string) => `/customers/${id}/status`,
+
+  // Sprint 9: Commerce Scheduling, QR Counter POS & Disputes
+  ORDERS_QR_MONITORING: '/orders/qr-monitoring',
+  ORDERS_PRE_ORDERS: '/orders/pre-orders',
+  ORDERS_CAPACITY_MONITORING: '/orders/capacity-monitoring',
+  ORDERS_CAPACITY_THROTTLE: (outletId: string) => `/orders/capacity-throttle/${outletId}`,
+  ORDERS_DISPUTES: '/orders/disputes',
+  ORDER_LIFECYCLE_TIMELINE: (id: string) => `/orders/${id}/lifecycle`,
+  CATALOG_RESTRICTED_POLICIES: '/catalog/restricted-policies',
+  CATALOG_REPORTED_ITEMS: '/catalog/reported-items',
+
+  // Sprint 10: Fiduciary, Compliance & Governance
+  FINANCE_INVOICES: '/finance/invoices',
+  FINANCE_GST_REPORTS: '/finance/gst-reports',
+  FINANCE_GATEWAY_FAILURES: '/finance/gateway-failures',
+  FINANCE_AUDIT_LOG: '/finance/audit-log',
+  SUBSCRIPTIONS_PAYMENTS: '/subscriptions/payments',
+  SUBSCRIPTIONS_RENEWALS: '/subscriptions/renewals',
+  SUBSCRIPTIONS_COUPONS: '/subscriptions/coupons',
+  SUBSCRIPTIONS_CHURN_ANALYTICS: '/subscriptions/churn-analytics',
+  SYSTEM_GATEWAY_PING: '/system/gateway-ping',
+  SYSTEM_SIEM_ALERTS: '/system/siem-alerts',
 } as const;

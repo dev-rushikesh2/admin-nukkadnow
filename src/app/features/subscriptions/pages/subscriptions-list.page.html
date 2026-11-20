@@ -1,20 +1,75 @@
 <div class="subscriptions-page-container">
   <admin-page-header
-    [title]="'Merchant SaaS Subscriptions — ' + (sessionService.geoAssignment()?.cityName || (selectedCity() === 'ALL' ? 'Global Grid' : selectedCity()))"
-    subtitle="Manage merchant software tier entitlements, recurring billing cycles, and invoice grace periods"
+    [title]="'Merchant SaaS Subscriptions & Retention — ' + (sessionService.geoAssignment()?.cityName || (selectedCity() === 'ALL' ? 'Maharashtra Grid' : selectedCity()))"
+    subtitle="Manage merchant software tier entitlements, recurring billing cycles, dunning notices & promotional coupons"
     breadcrumb="Console / Financials & Subscriptions">
     <div actions>
       <button type="button" class="admin-btn btn-secondary btn-sm" (click)="refresh()">↻ Refresh</button>
-      <button type="button" class="admin-btn btn-primary btn-sm" (click)="exportCsv()">Export CSV</button>
+      @if (activeSubTab() === 'ACTIVE_SUBS') {
+        <button type="button" class="admin-btn btn-secondary btn-sm" (click)="exportCsv()">Export CSV</button>
+      } @else if (activeSubTab() === 'DISCOUNTS_COUPONS') {
+        <button type="button" class="admin-btn btn-primary btn-sm" (click)="openCreateCouponModal()">+ Create Promo Coupon</button>
+      }
     </div>
   </admin-page-header>
+
+  <!-- Notification Banner -->
+  @if (successNotice()) {
+    <div class="alert-banner success">
+      <span>✓ {{ successNotice() }}</span>
+    </div>
+  }
+
+  <!-- Master Sub-Tabs Bar (Sprint 10 SaaS Suite) -->
+  <div class="saas-subtabs-bar">
+    <button
+      type="button"
+      class="subtab-btn"
+      [class.active]="activeSubTab() === 'ACTIVE_SUBS'"
+      (click)="switchSubTab('ACTIVE_SUBS')">
+      🔄 Active Store Subscriptions (#94, #98)
+    </button>
+    <button
+      type="button"
+      class="subtab-btn"
+      [class.active]="activeSubTab() === 'PAYMENTS_RECEIPTS'"
+      (click)="switchSubTab('PAYMENTS_RECEIPTS')">
+      💳 Payment Receipts Archive (#95)
+      <span class="tab-badge">{{ receipts().length }}</span>
+    </button>
+    <button
+      type="button"
+      class="subtab-btn"
+      [class.active]="activeSubTab() === 'RENEWALS_EXPIRY'"
+      (click)="switchSubTab('RENEWALS_EXPIRY')">
+      ⏳ Upcoming Renewals & Dunning (#96)
+      @if (renewals().length > 0) {
+        <span class="tab-badge amber">{{ renewals().length }}</span>
+      }
+    </button>
+    <button
+      type="button"
+      class="subtab-btn"
+      [class.active]="activeSubTab() === 'DISCOUNTS_COUPONS'"
+      (click)="switchSubTab('DISCOUNTS_COUPONS')">
+      🏷️ Discounts & Promo Codes (#97, #104)
+      <span class="tab-badge">{{ coupons().length }}</span>
+    </button>
+    <button
+      type="button"
+      class="subtab-btn"
+      [class.active]="activeSubTab() === 'CHURN_ANALYTICS'"
+      (click)="switchSubTab('CHURN_ANALYTICS')">
+      📈 SaaS Churn & Retention Analytics (#98)
+    </button>
+  </div>
 
   <!-- City Scope Selection -->
   @if (sessionService.isRoot() || sessionService.isSuperAdmin()) {
     <div class="territory-filter-bar">
       <span class="bar-lbl">Territory Filter:</span>
       <div class="city-pills">
-        <button type="button" class="cpill" [class.active]="selectedCity() === 'ALL'" (click)="onCityChange('ALL')">All Cities (Global)</button>
+        <button type="button" class="cpill" [class.active]="selectedCity() === 'ALL'" (click)="onCityChange('ALL')">All Maharashtra (Global)</button>
         <button type="button" class="cpill" [class.active]="selectedCity() === 'Nagpur'" (click)="onCityChange('Nagpur')">📍 Nagpur</button>
         <button type="button" class="cpill" [class.active]="selectedCity() === 'Akola'" (click)="onCityChange('Akola')">📍 Akola</button>
         <button type="button" class="cpill" [class.active]="selectedCity() === 'Amravati'" (click)="onCityChange('Amravati')">📍 Amravati</button>
@@ -27,64 +82,320 @@
     </div>
   }
 
-  <!-- Summary Metric Chips -->
-  <div class="subscriptions-metrics-row">
-    <div class="smetric-chip green">
-      <span class="smetric-val">{{ mrrFormatted() }}</span>
-      <span class="smetric-lbl">Monthly Recurring Revenue (MRR)</span>
-    </div>
-    <div class="smetric-chip blue">
-      <span class="smetric-val">{{ activeStoresCount() }}</span>
-      <span class="smetric-lbl">Subscribed Merchants</span>
-    </div>
-    <div class="smetric-chip" [class.amber]="pastDueCount() > 0" [class.purple]="pastDueCount() === 0">
-      <span class="smetric-val">{{ pastDueCount() }}</span>
-      <span class="smetric-lbl">Past Due (In Grace Period)</span>
-    </div>
-    <div class="smetric-chip purple">
-      <span class="smetric-val">100%</span>
-      <span class="smetric-lbl">Collection Efficiency</span>
-    </div>
-  </div>
-
-  <!-- Operational Filter Toolbar -->
-  <div class="filter-toolbar">
-    <div class="status-tabs">
-      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'ALL'" (click)="onStatusChange('ALL')">
-        All Plans ({{ store.items().length }})
-      </button>
-      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'ACTIVE'" (click)="onStatusChange('ACTIVE')">
-        Active
-      </button>
-      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'TRIAL'" (click)="onStatusChange('TRIAL')">
-        Trial
-      </button>
-      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'PAST_DUE'" (click)="onStatusChange('PAST_DUE')">
-        Past Due
-      </button>
-      <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'CANCELLED'" (click)="onStatusChange('CANCELLED')">
-        Cancelled
-      </button>
+  <!-- TAB 1: ACTIVE STORE SUBSCRIPTIONS -->
+  @if (activeSubTab() === 'ACTIVE_SUBS') {
+    <!-- Summary Metric Chips -->
+    <div class="subscriptions-metrics-row">
+      <div class="smetric-chip green">
+        <span class="smetric-val">{{ mrrFormatted() }}</span>
+        <span class="smetric-lbl">Monthly Recurring Revenue (MRR)</span>
+      </div>
+      <div class="smetric-chip blue">
+        <span class="smetric-val">{{ activeStoresCount() }}</span>
+        <span class="smetric-lbl">Subscribed Merchants</span>
+      </div>
+      <div class="smetric-chip" [class.amber]="pastDueCount() > 0" [class.purple]="pastDueCount() === 0">
+        <span class="smetric-val">{{ pastDueCount() }}</span>
+        <span class="smetric-lbl">Past Due (In Grace Period)</span>
+      </div>
+      <div class="smetric-chip purple">
+        <span class="smetric-val">100%</span>
+        <span class="smetric-lbl">Collection Efficiency</span>
+      </div>
     </div>
 
-    <div class="search-box">
-      <input
-        type="search"
-        placeholder="Filter by merchant name, plan tier, locality..."
-        [value]="searchQuery()"
-        (input)="onSearchChange($event)"
-        class="search-input" />
-    </div>
-  </div>
+    <!-- Operational Filter Toolbar -->
+    <div class="filter-toolbar">
+      <div class="status-tabs">
+        <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'ALL'" (click)="onStatusChange('ALL')">
+          All Plans ({{ store.items().length }})
+        </button>
+        <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'ACTIVE'" (click)="onStatusChange('ACTIVE')">
+          Active
+        </button>
+        <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'TRIAL'" (click)="onStatusChange('TRIAL')">
+          Trial
+        </button>
+        <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'PAST_DUE'" (click)="onStatusChange('PAST_DUE')">
+          Past Due
+        </button>
+        <button type="button" class="tab-btn" [class.active]="selectedStatus() === 'CANCELLED'" (click)="onStatusChange('CANCELLED')">
+          Cancelled
+        </button>
+      </div>
 
-  <!-- Data Table -->
-  <div class="table-container">
-    <admin-data-table
-      [columns]="tableColumns"
-      [data]="filteredSubscriptions()"
-      [totalCount]="filteredSubscriptions().length"
-      [loading]="store.loading()"
-      (rowClick)="onRowClick($event)">
-    </admin-data-table>
-  </div>
+      <div class="search-box">
+        <input
+          type="search"
+          placeholder="Filter by merchant name, plan tier, locality..."
+          [value]="searchQuery()"
+          (input)="onSearchChange($event)"
+          class="search-input" />
+      </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="table-container">
+      <admin-data-table
+        [columns]="tableColumns"
+        [data]="filteredSubscriptions()"
+        [totalCount]="filteredSubscriptions().length"
+        [loading]="store.loading()"
+        (rowClick)="onRowClick($event)">
+      </admin-data-table>
+    </div>
+  }
+
+  <!-- TAB 2: PAYMENT RECEIPTS ARCHIVE (Screen #95) -->
+  @if (activeSubTab() === 'PAYMENTS_RECEIPTS') {
+    <div class="tab-content-panel">
+      <div class="panel-header">
+        <div>
+          <h3>Merchant SaaS Billing Receipts & Tax Invoices (Screen #95)</h3>
+          <p class="panel-desc">Statutory subscription receipts generated for automated UPI mandates and card recurring debits.</p>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Receipt Ref</th>
+              <th>Merchant & Store</th>
+              <th>City</th>
+              <th>Subscribed Plan</th>
+              <th>Amount Billed</th>
+              <th>Payment Gateway / Method</th>
+              <th>Date Paid</th>
+              <th>Status</th>
+              <th>Receipt</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (rec of receipts(); track rec.id) {
+              <tr>
+                <td><span class="font-mono text-xs font-bold text-primary">{{ rec.receiptNumber }}</span></td>
+                <td><div class="font-semibold text-primary">{{ rec.merchantName }}</div></td>
+                <td><span class="city-tag">📍 {{ rec.city }}</span></td>
+                <td><span class="plan-tag">{{ rec.planName }}</span></td>
+                <td><strong class="text-green-600 font-bold">₹{{ rec.amountRupees.toLocaleString('en-IN') }}</strong></td>
+                <td><span class="method-chip">{{ rec.paymentMethod }}</span></td>
+                <td><span class="text-xs text-muted">{{ rec.paidAt | date:'medium' }}</span></td>
+                <td><admin-badge variant="success">{{ rec.status }}</admin-badge></td>
+                <td>
+                  <a [href]="rec.invoiceUrl" class="admin-btn btn-secondary btn-xs" target="_blank" download>
+                    📄 Receipt
+                  </a>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- TAB 3: UPCOMING RENEWALS & DUNNING (Screen #96) -->
+  @if (activeSubTab() === 'RENEWALS_EXPIRY') {
+    <div class="tab-content-panel">
+      <div class="panel-header">
+        <div>
+          <h3>Subscription Renewal Velocity & Dunning Triage (Screen #96)</h3>
+          <p class="panel-desc">Monitoring merchant plans expiring in the next 14 days, auto-debit readiness, and dunning notices.</p>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Renewal ID</th>
+              <th>Merchant</th>
+              <th>City</th>
+              <th>Plan Tier</th>
+              <th>Expiry Timestamp</th>
+              <th>Days Left</th>
+              <th>Auto-Debit Mandate</th>
+              <th>Dunning Alert</th>
+              <th>Risk Tier</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (ren of renewals(); track ren.id) {
+              <tr>
+                <td><span class="font-mono text-xs">{{ ren.id }}</span></td>
+                <td><strong>{{ ren.merchantName }}</strong></td>
+                <td><span class="city-tag">📍 {{ ren.city }}</span></td>
+                <td><span class="plan-tag">{{ ren.planName }}</span></td>
+                <td><span class="text-xs">{{ ren.expiryDate | date:'mediumDate' }}</span></td>
+                <td>
+                  <strong [class.text-red-600]="ren.daysRemaining <= 3" [class.text-amber-600]="ren.daysRemaining > 3">
+                    {{ ren.daysRemaining }} day(s)
+                  </strong>
+                </td>
+                <td>
+                  @if (ren.autoDebitEnabled) {
+                    <span class="text-xs text-green-600 font-semibold">✓ Active Mandate</span>
+                  } @else {
+                    <span class="text-xs text-red-500 font-semibold">⚠ Manual Transfer</span>
+                  }
+                </td>
+                <td>
+                  @if (ren.dunningNoticeSent) {
+                    <span class="status-pill text-xs amber">Dispatched</span>
+                  } @else {
+                    <span class="text-xs text-muted">Not Required</span>
+                  }
+                </td>
+                <td>
+                  <admin-badge [variant]="ren.riskLevel === 'NORMAL' ? 'success' : (ren.riskLevel === 'EXPIRING_SOON' ? 'warning' : 'danger')">
+                    {{ ren.riskLevel }}
+                  </admin-badge>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- TAB 4: DISCOUNTS & PROMO COUPONS (Screen #97 / #104) -->
+  @if (activeSubTab() === 'DISCOUNTS_COUPONS') {
+    <div class="tab-content-panel">
+      <div class="panel-header">
+        <div>
+          <h3>Merchant Onboarding Promo Codes & Subscription Vouchers (Screens #97 & #104)</h3>
+          <p class="panel-desc">Create and manage marketing incentive vouchers for initial merchant onboarding.</p>
+        </div>
+        <button type="button" class="admin-btn btn-primary btn-sm" (click)="openCreateCouponModal()">
+          + Create Promo Coupon
+        </button>
+      </div>
+
+      <div class="coupons-grid">
+        @for (cpn of coupons(); track cpn.id) {
+          <div class="coupon-card">
+            <div class="coupon-header">
+              <span class="coupon-code">{{ cpn.code }}</span>
+              <admin-badge [variant]="cpn.status === 'ACTIVE' ? 'success' : 'neutral'">{{ cpn.status }}</admin-badge>
+            </div>
+            <div class="coupon-benefit">
+              @if (cpn.discountPercent) {
+                <span class="benefit-val">{{ cpn.discountPercent }}% OFF</span>
+              } @else if (cpn.discountPaise) {
+                <span class="benefit-val">₹{{ cpn.discountPaise / 100 }} OFF</span>
+              }
+              <span class="benefit-desc">{{ cpn.description }}</span>
+            </div>
+            <div class="coupon-meta">
+              <div>Valid until: <strong>{{ cpn.validUntil | date:'mediumDate' }}</strong></div>
+              <div>Redemptions: <strong>{{ cpn.redemptionCount }} / {{ cpn.maxRedemptions }}</strong></div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- TAB 5: SAAS CHURN & RETENTION ANALYTICS (Screen #98) -->
+  @if (activeSubTab() === 'CHURN_ANALYTICS') {
+    @if (churnAnalytics(); as a) {
+      <div class="tab-content-panel">
+        <div class="panel-header">
+          <div>
+            <h3>SaaS Subscription Growth, Retention Cohorts & Churn (Screen #98)</h3>
+            <p class="panel-desc">Real-time telemetry measuring Net MRR movement, subscriber longevity, and plan distribution.</p>
+          </div>
+        </div>
+
+        <div class="analytics-kpi-grid">
+          <div class="akpi-card">
+            <span class="akpi-title">Current MRR</span>
+            <span class="akpi-value text-green-600">₹{{ a.currentMrrRupees.toLocaleString('en-IN') }}</span>
+            <span class="akpi-delta">+{{ a.mrrGrowthMoMPct }}% MoM Growth</span>
+          </div>
+          <div class="akpi-card">
+            <span class="akpi-title">Active Subscribed Stores</span>
+            <span class="akpi-value">{{ a.activeSubscribers }}</span>
+            <span class="akpi-subtext">+{{ a.newSubscribersMTD }} new stores this month</span>
+          </div>
+          <div class="akpi-card">
+            <span class="akpi-title">Monthly Churn Rate</span>
+            <span class="akpi-value text-amber-600">{{ a.churnRatePct }}%</span>
+            <span class="akpi-subtext">{{ a.churnedSubscribersMTD }} store cancellation</span>
+          </div>
+          <div class="akpi-card">
+            <span class="akpi-title">Average Revenue Per Store (ARPU)</span>
+            <span class="akpi-value">₹{{ a.averageRevenuePerStoreRupees.toFixed(2) }}</span>
+            <span class="akpi-subtext">Across all active tiers</span>
+          </div>
+        </div>
+
+        <div class="retention-section">
+          <h4>Merchant Cohort Retention Table (3-Month Trajectory)</h4>
+          <div class="table-container">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Cohort Month</th>
+                  <th>New Stores Joined</th>
+                  <th>Month 1 Retention</th>
+                  <th>Month 2 Retention</th>
+                  <th>Month 3 Retention</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (c of a.cohortRetention; track c.cohort) {
+                  <tr>
+                    <td><strong>{{ c.cohort }}</strong></td>
+                    <td>{{ c.initialCount }} stores</td>
+                    <td><strong class="text-green-600">{{ c.month1RetentionPct }}%</strong></td>
+                    <td><strong class="text-green-600">{{ c.month2RetentionPct }}%</strong></td>
+                    <td><strong class="text-green-600">{{ c.month3RetentionPct }}%</strong></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    }
+  }
+
+  <!-- MODAL: CREATE PROMO COUPON -->
+  @if (showCreateCouponModal()) {
+    <div class="admin-modal-backdrop" (click)="closeCreateCouponModal()">
+      <div class="admin-modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Create Merchant Subscription Promo Coupon</h3>
+          <button type="button" class="btn-close" (click)="closeCreateCouponModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Coupon Code (e.g. FESTIVE30)</label>
+            <input type="text" class="admin-input font-mono uppercase" [(ngModel)]="newCouponCode" placeholder="Enter coupon code" />
+          </div>
+          <div class="form-group">
+            <label>Discount Percentage (%)</label>
+            <input type="number" class="admin-input" [(ngModel)]="newCouponDiscount" min="5" max="100" />
+          </div>
+          <div class="form-group">
+            <label>Max Redemptions Allowed</label>
+            <input type="number" class="admin-input" [(ngModel)]="newCouponMaxRedemptions" min="1" max="1000" />
+          </div>
+          <div class="form-group">
+            <label>Description / Promotional Purpose</label>
+            <textarea class="admin-input" [(ngModel)]="newCouponDesc" placeholder="e.g. Special festive discount for Vidarbha stores"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="admin-btn btn-secondary btn-sm" (click)="closeCreateCouponModal()">Cancel</button>
+          <button type="button" class="admin-btn btn-primary btn-sm" [disabled]="!newCouponCode.trim()" (click)="submitCreateCoupon()">
+            ✓ Issue Coupon
+          </button>
+        </div>
+      </div>
+    </div>
+  }
 </div>
